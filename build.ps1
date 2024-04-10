@@ -15,8 +15,16 @@ $moduleContent = @()
 Get-ChildItem -Path "$PSScriptRoot/src/public" -Filter '*.ps1' -Exclude '*.Tests.ps1' -File -Recurse |
     ForEach-Object -Process {
         $moduleNames += $_.BaseName
-        $moduleContent += ''
-        $moduleContent += ( Get-Content -Path $_.FullName ).Replace('../../private', 'private')
+        $moduleContent += '<#'
+        $moduleContent += (
+            # Ignore anything in the function files above the help comments
+            Get-Content -Path $_.FullName | Select-String -Pattern "<#" -SimpleMatch -Context 0,99999
+        ).Context.PostContext | ForEach-Object {
+            if ($_ -ne $null) {
+                $_.Replace('../../private', 'private')
+            }
+            else { $_ }
+        }
     }
 $moduleContent | Set-Content -Path "$OutDirectory/$name.psm1" -Force
 New-Item -Path "$OutDirectory/private" -ItemType Directory -Force
