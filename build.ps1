@@ -20,16 +20,18 @@ $moduleContent = @()
 Get-ChildItem -Path "$SourceDirectory/public" -Filter '*.ps1' -Exclude '*.Tests.ps1' -File -Recurse |
     ForEach-Object -Process {
         $moduleNames += $_.BaseName
-        $moduleContent += '<#'
-        $moduleContent += (
-            # Ignore anything in the function files above the help comments
-            Get-Content -Path $_.FullName | Select-String -Pattern '<#' -SimpleMatch -Context 0, 99999
-        ).Context.PostContext | ForEach-Object {
-            if ($_ -ne $null) {
-                $_.Replace('../../private', 'private')
-            }
-            else { $_ }
-        }
+        $functionContent = Get-Content -Path $_.FullName
+
+        # Remove any init blocks outside of the function
+        $startIndex = (
+            $functionContent.IndexOf('<#'),
+            $functionContent.IndexOf($functionContent -match 'function')[0]
+        ) | Sort-Object | Select-Object -First 1
+        $functionContent = $functionContent[$startIndex..($functionContent.Length - 1)]
+        # Format the private function dot sources for the expected folder structure
+        $functionContent = $functionContent.Replace('../../private', 'private')
+
+        $moduleContent += $functionContent
     }
 $moduleContent | Set-Content -Path "$ModuleOutputDirectory/$name.psm1" -Force
 New-Item -Path "$ModuleOutputDirectory/private" -ItemType Directory -Force
