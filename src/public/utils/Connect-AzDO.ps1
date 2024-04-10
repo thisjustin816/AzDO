@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Short description
 
@@ -50,7 +50,7 @@ function Connect-AzDO {
     }
     Set-EnvironmentVariable -Name 'SYSTEM_COLLECTIONURI' -Value $newCollectionUri -Scope User -Force
 
-    while(!$newProject) {
+    while (!$newProject) {
         $newProject = if ($Project) {
             $Project
         }
