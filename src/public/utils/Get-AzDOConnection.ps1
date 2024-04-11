@@ -1,15 +1,15 @@
 ﻿<#
 .SYNOPSIS
-${1:Short description}
+Gets the environment variables being used to connect to Azure DevOps.
 
 .DESCRIPTION
-${2:Long description}
+Gets the environment variables being used to connect to Azure DevOps.
 
 .EXAMPLE
-${3:An example}
+Get-AzDOConnection
 
 .NOTES
-${4:General notes}
+N/A
 #>
 function Get-AzDOConnection {
     [CmdletBinding()]

@@ -1,26 +1,23 @@
 ﻿[CmdletBinding()]
 param (
     [String]$Name = 'AzDO',
-    [String]$Version,
+    [String]$Version = '0.0.1',
     [String]$SourceDirectory = "$PSScriptRoot/src",
     [String]$OutputDirectory = "$PSScriptRoot/out"
 )
 
 Remove-Item -Path $OutputDirectory -Recurse -Force -ErrorAction SilentlyContinue
-$ModuleOutputDirectory = "$OutputDirectory/$Name"
-if ($Version) {
-    $ModuleOutputDirectory += "/$Version"
-}
+$ModuleOutputDirectory = "$OutputDirectory/$Name/$Version"
 
 Invoke-ScriptAnalyzer -Path $SourceDirectory -Recurse -Severity Information
 
-$builtModule = New-Item -Path "$ModuleOutputDirectory/$name.psm1" -ItemType File -Force
-$moduleNames = @()
+$null = New-Item -Path "$ModuleOutputDirectory/$name.psm1" -ItemType File -Force
+$functionNames = @()
 $moduleContent = @()
 Get-ChildItem -Path "$SourceDirectory/public" -Filter '*.ps1' -Exclude '*.Tests.ps1' -File -Recurse |
     ForEach-Object -Process {
         $functionName = $_.BaseName
-        $moduleNames += $functionName
+        $functionNames += $functionName
         $functionContent = Get-Content -Path $_.FullName
 
         # Remove any init blocks outside of the function
@@ -40,8 +37,40 @@ $null = New-Item -Path "$ModuleOutputDirectory/private" -ItemType Directory -For
 Get-ChildItem -Path "$SourceDirectory/private" -Exclude '*.Tests.ps1' |
     Copy-Item -Destination "$ModuleOutputDirectory/private" -Recurse -Force
 
-Get-Module -Name $Name -All | Remove-Module -Force -ErrorAction SilentlyContinue
+$manifestPath = "$ModuleOutputDirectory/$Name.psd1"
+$repoUrl = ( & git config --get remote.origin.url ).Replace('.git', '')
+$companyName = if ($repoUrl -match 'github') {
+    $repoUrl.Split('/')[3]
+}
+else {
+    $env:USERDOMAIN
+}
+$requiredModulesStatement = Get-Content -Path "$SourceDirectory\$Name.psm1" |
+    Where-Object -FilterScript { $_ -match '#Requires' }
+$requiredModules = (($requiredModulesStatement -split '-Modules ')[1] -split ',').Trim()
+$newModuleManifest = @{
+    Path = $manifestPath
+    Author = ( & git log --format='%aN' | Sort-Object -Unique )
+    CompanyName = $companyName
+    Copyright = "(c) $( Get-Date -Format yyyy ) $companyName. All rights reserved."
+    RootModule = "$Name.psm1"
+    ModuleVersion = $Version
+    Description = 'A module for interacting with Azure DevOps.'
+    PowerShellVersion = 5.1
+    FunctionsToExport = $functionNames
+    CompatiblePSEditions = ('Desktop', 'Core')
+    Tags = @('Azure DevOps', 'DevOps', 'Azure', 'Pipelines')
+    ProjectUri = $repoUrl
+    LicenseUri = 'https://opensource.org/licenses/MIT'
+    ReleaseNotes = ( git log -1 --pretty=%B )[0]
+}
+if ($requiredModules) {
+    $newModuleManifest['RequiredModules'] = $requiredModules
+}
+New-ModuleManifest @newModuleManifest
+Get-Item -Path $manifestPath
 
+Get-Module -Name $Name -All | Remove-Module -Force -ErrorAction SilentlyContinue
 $config = [PesterConfiguration]::Default
 $config.Run.Path = $SourceDirectory
 $config.Run.Exit = $true
@@ -50,4 +79,5 @@ $config.Output.Verbosity = 'Detailed'
 # TODO: Fix Tests
 # Invoke-Pester -Configuration $config
 
-Import-Module -Name $builtModule.FullName -Force -PassThru
+Get-Module -Name $Name -All | Remove-Module -Force -ErrorAction SilentlyContinue
+Import-Module -Name $manifestPath -Force -PassThru

@@ -1,24 +1,25 @@
 ﻿<#
 .SYNOPSIS
-Short description
+Initializes environment variables needed to connect to Azure DevOps.
 
 .DESCRIPTION
-Long description
+This function initializes environment variables needed to connect to Azure DevOps. If an existing connection is
+found, the user is prompted to overwrite the existing connection.
 
 .PARAMETER Project
-Parameter description
+The default Azure DevOps project to use.
 
 .PARAMETER CollectionUri
-Parameter description
+The Azure DevOps project collection URI.
 
 .PARAMETER Pat
-Parameter description
+The Azure DevOps Personal Access Token (PAT) to use.
 
 .EXAMPLE
-An example
+Connect-AzDO
 
 .NOTES
-General notes
+N/A
 #>
 function Connect-AzDO {
     param (
