@@ -1,6 +1,6 @@
 ﻿[CmdletBinding()]
 param (
-    [String]$Name = 'AzDO',
+    [String]$Name = 'AzDOCmd',
     [String]$Version = '0.0.1',
     [String]$SourceDirectory = "$PSScriptRoot/src",
     [String]$OutputDirectory = "$PSScriptRoot/out"
