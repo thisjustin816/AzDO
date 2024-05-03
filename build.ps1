@@ -6,6 +6,7 @@
 }
 
 Push-Location -Path $PSScriptRoot
+Install-Module -Name JBUtils
 Import-Module -Name "$PSScriptRoot/src/$($BuildPSModule['Name']).psm1" -Force
 Install-Module -Name PSModuleUtils
 Build-PSModule @BuildPSModule
