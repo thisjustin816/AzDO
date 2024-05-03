@@ -1,6 +1,4 @@
-﻿#Requires -Modules PSModuleUtils
-
-$BuildPSModule = @{
+﻿$BuildPSModule = @{
     Name        = 'AzDOCmd'
     Version     = '0.0.3'
     Description = 'A module for interacting with Azure DevOps.'
@@ -9,6 +7,7 @@ $BuildPSModule = @{
 
 Push-Location -Path $PSScriptRoot
 Import-Module -Name "$PSScriptRoot/src/$($BuildPSModule['Name']).psm1" -Force
+Install-Module -Name PSModuleUtils
 Build-PSModule @BuildPSModule
 Test-PSModule -Name $BuildPSModule['Name'] -Tag Unit
 Pop-Location
