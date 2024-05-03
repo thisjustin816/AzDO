@@ -1,11 +1,11 @@
-# AzDO
+# AzDOCmd
 
-This is a collection of Azure DevOps API functions that will eventually be published to PSGallery as a module.
+A module for interacting with Azure DevOps.
 
-For now, manually import the module file:
+## Setup
 
 ```powershell
-Import-Module .\src\AzDO.psm1
+Install-Module AzDOCmd
 ```
 
 ## Development
