@@ -6,7 +6,7 @@
 }
 
 Push-Location -Path $PSScriptRoot
-Install-Module -Name JBUtils -Force
+Install-Module -Name JBUtils -Force -AllowClobber
 Import-Module -Name "$PSScriptRoot/src/$($BuildPSModule['Name']).psm1" -Force
 Install-Module -Name PSModuleUtils -Force
 Build-PSModule @BuildPSModule
