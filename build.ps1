@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
 param (
     [String]$Name = 'AzDOCmd',
-    [String]$Version = '0.0.1',
+    [String]$Version = '0.0.2',
     [String]$SourceDirectory = "$PSScriptRoot/src",
     [String]$OutputDirectory = "$PSScriptRoot/out"
 )
@@ -45,6 +45,15 @@ $companyName = if ($repoUrl -match 'github') {
 else {
     $env:USERDOMAIN
 }
+$existingGuid = Find-Module -Name $Name -Repository PSGallery |
+    Select-Object -ExpandProperty AdditionalMetadata |
+    Select-Object -ExpandProperty GUID
+$guid = if ($existingGuid) {
+    $existingGuid
+}
+else {
+    ( New-Guid ).Guid
+}
 $requiredModulesStatement = Get-Content -Path "$SourceDirectory\$Name.psm1" |
     Where-Object -FilterScript { $_ -match '#Requires' }
 $requiredModules = (($requiredModulesStatement -split '-Modules ')[1] -split ',').Trim()
@@ -55,11 +64,12 @@ $newModuleManifest = @{
     Copyright = "(c) $( Get-Date -Format yyyy ) $companyName. All rights reserved."
     RootModule = "$Name.psm1"
     ModuleVersion = $Version
+    Guid = $guid
     Description = 'A module for interacting with Azure DevOps.'
     PowerShellVersion = 5.1
     FunctionsToExport = $functionNames
     CompatiblePSEditions = ('Desktop', 'Core')
-    Tags = @('Azure DevOps', 'DevOps', 'Azure', 'Pipelines')
+    Tags = @('AzureDevOps', 'DevOps', 'Azure', 'Pipelines')
     ProjectUri = $repoUrl
     LicenseUri = 'https://opensource.org/licenses/MIT'
     ReleaseNotes = ( git log -1 --pretty=%B )[0]
@@ -69,15 +79,6 @@ if ($requiredModules) {
 }
 New-ModuleManifest @newModuleManifest
 Get-Item -Path $manifestPath
-
-Get-Module -Name $Name -All | Remove-Module -Force -ErrorAction SilentlyContinue
-$config = [PesterConfiguration]::Default
-$config.Run.Path = $SourceDirectory
-$config.Run.Exit = $true
-$config.Run.Throw = $true
-$config.Output.Verbosity = 'Detailed'
-# TODO: Fix Tests
-# Invoke-Pester -Configuration $config
 
 Get-Module -Name $Name -All | Remove-Module -Force -ErrorAction SilentlyContinue
 Import-Module -Name $manifestPath -Force -PassThru

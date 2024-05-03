@@ -1,34 +1,34 @@
 <#
 .SYNOPSIS
-Gets a build definition object from Azure Pipelines.
+Gets a release pipeline definition object from Azure Pipelines.
 
 .DESCRIPTION
-Gets a build definition object from Azure Pipelines using a project and name filter.
+Gets a release pipeline definition object from Azure Pipelines using a project and name filter.
 
 .PARAMETER Name
-A filter to search for pipeline names.
+A filter to search for release pipeline names.
 
 .PARAMETER Id
-The pipeline ID to get.
+The release pipeline ID to get.
 
 .PARAMETER Project
-Project that the pipelines reside in.
+Project that the release pipelines reside in.
 
 .PARAMETER CollectionUri
 The project collection URL (https://dev.azure.com/[orgranization]).
 
 .PARAMETER Pat
-Personal access token authorized to administer builds. Defaults to $env:SYSTEM_ACCESSTOKEN for use in Azure
+Personal access token authorized to administer releases. Defaults to $env:SYSTEM_ACCESSTOKEN for use in Azure
 Pipelines.
 
 .EXAMPLE
-Get-AzDOPipeline -Project Packages -Name AzurePipeline*
+Get-AzDOReleasePipeline -Project Packages -Name ReleasePipeline*
 
 .LINK
-https://docs.microsoft.com/en-us/rest/api/azure/devops/pipelines/pipelines/get
+https://learn.microsoft.com/en-us/rest/api/azure/devops/release/definitions/get
 
 .LINK
-https://docs.microsoft.com/en-us/rest/api/azure/devops/pipelines/pipelines/list
+https://docs.microsoft.com/en-us/rest/api/azure/devops/release/pipelines/list
 
 .NOTES
 The Cmdlet will work as-is in a UI Pipeline with the default $Pat parameter as long as OAUTH access has been
@@ -41,7 +41,7 @@ steps:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
 #>
 
-function Get-AzDOPipeline {
+function Get-AzDOReleasePipeline {
     [CmdletBinding(DefaultParameterSetName = 'Name')]
     param (
         [Parameter(ParameterSetName = 'Name', Position = 0)]
@@ -55,10 +55,12 @@ function Get-AzDOPipeline {
     )
 
     begin {
+        . "$PSScriptRoot/../../private/Add-AzDOProject.ps1"
+
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
-            ApiVersion    = '6.1'
+            ApiVersion    = '7.2-preview.4'
         }
     }
 
@@ -68,9 +70,13 @@ function Get-AzDOPipeline {
                 $pipeline = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     -Method Get `
+                    -SubDomain vsrm `
                     -Project $projectName `
-                    -Endpoint 'build/definitions' `
-                    -Params "definitionIds=$($Id -join ',')" `
+                    -Endpoint 'release/definitions' `
+                    -Params @(
+                        "definitionIds=$($Id -join ',')"
+                        'propertyFilters=variables,environments'
+                     ) `
                     -NoRetry:$NoRetry `
                     -WhatIf:$false
                 if ($pipeline) {
@@ -87,13 +93,17 @@ function Get-AzDOPipeline {
                     $pipelineResponse = Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `
                         -Method Get `
+                        -SubDomain vsrm `
                         -Project $projectName `
-                        -Endpoint 'build/definitions' `
-                        -Params "name=$filter" `
+                        -Endpoint 'release/definitions' `
+                        -Params @(
+                            "searchText=$filter"
+                            'propertyFilters=variables,environments'
+                         ) `
                         -NoRetry:$NoRetry `
                         -WhatIf:$false
                     if ($pipelineResponse) {
-                        $pipelineResponse
+                        $pipelineResponse | Add-AzDOProject -NoRetry:$NoRetry -CollectionUri $CollectionUri -Pat $Pat
                     }
                     else {
                         Write-Warning -Message "No pipelines found matching '$filter' in $projectName."
@@ -106,12 +116,14 @@ function Get-AzDOPipeline {
                 $pipelineResponse = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     -Method Get `
+                    -SubDomain vsrm `
                     -Project $projectName `
-                    -Endpoint 'build/definitions' `
+                    -Endpoint 'release/definitions' `
+                    -Params 'propertyFilters=variables,environments' `
                     -NoRetry:$NoRetry `
                     -WhatIf:$false
                 if ($pipelineResponse) {
-                    $pipelineResponse
+                    $pipelineResponse | Add-AzDOProject -NoRetry:$NoRetry -CollectionUri $CollectionUri -Pat $Pat
                 }
                 else {
                     Write-Warning -Message "No pipelines found in $projectName."

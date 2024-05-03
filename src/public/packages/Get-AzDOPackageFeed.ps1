@@ -35,7 +35,7 @@ function Get-AzDOPackageFeed {
 
     begin {
         $script:AzApiHeaders = @{
-            Headers       = Initialize-AzRestApi -Pat $Pat
+            Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
             ApiVersion    = '5.1-preview.1'
         }
@@ -44,7 +44,7 @@ function Get-AzDOPackageFeed {
     process {
         foreach ($projectName in $Project) {
             $allFeeds = @()
-            $allFeeds += Invoke-AzRestApiMethod `
+            $allFeeds += Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
                 -Method Get `
                 -SubDomain 'feeds' `
