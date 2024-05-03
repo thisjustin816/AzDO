@@ -36,7 +36,7 @@ enabled for the pipeline/job. If using a YAML build, the system.accesstoken vari
 mapped to the steps environment like the following example:
 
 steps:
-- powershell: Invoke-WebRequest -Uri $Uri -Headers ( Initialize-AzRestApi )
+- powershell: Invoke-WebRequest -Uri $Uri -Headers ( Initialize-AzDORestApi )
   env:
     SYSTEM_ACCESSTOKEN: $(system.accesstoken)
 #>
@@ -56,7 +56,7 @@ function Get-AzDOPipeline {
 
     begin {
         $script:AzApiHeaders = @{
-            Headers       = Initialize-AzRestApi -Pat $Pat
+            Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
             ApiVersion    = '6.1'
         }
@@ -65,7 +65,7 @@ function Get-AzDOPipeline {
     process {
         if ($Id) {
             foreach ($projectName in $Project) {
-                $pipeline = Invoke-AzRestApiMethod `
+                $pipeline = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     -Method Get `
                     -Project $projectName `
@@ -84,7 +84,7 @@ function Get-AzDOPipeline {
         elseif ($Name) {
             foreach ($filter in $Name) {
                 foreach ($projectName in $Project) {
-                    $pipelineResponse = Invoke-AzRestApiMethod `
+                    $pipelineResponse = Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `
                         -Method Get `
                         -Project $projectName `
@@ -103,7 +103,7 @@ function Get-AzDOPipeline {
         }
         else {
             foreach ($projectName in $Project) {
-                $pipelineResponse = Invoke-AzRestApiMethod `
+                $pipelineResponse = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     -Method Get `
                     -Project $projectName `

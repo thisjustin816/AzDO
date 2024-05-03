@@ -36,12 +36,12 @@ function Get-AzDORepository {
         [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
-    Invoke-AzRestApiMethod `
+    Invoke-AzDORestApiMethod `
         -Method Get `
         -CollectionUri $CollectionUri `
         -Project $Project `
         -Endpoint "git/repositories/$Name" `
         -ApiVersion '7.1-preview.1' `
-        -Headers ( Initialize-AzRestApi -Pat $Pat ) `
+        -Headers ( Initialize-AzDORestApi -Pat $Pat ) `
         -NoRetry:$NoRetry
 }
