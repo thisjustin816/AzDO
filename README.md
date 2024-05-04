@@ -1,11 +1,11 @@
-# AzDO
+# AzDOCmd
 
-This is a collection of Azure DevOps API functions that will eventually be published to PSGallery as a module.
+A module for interacting with Azure DevOps.
 
-For now, manually import the module file:
+## Setup
 
 ```powershell
-Import-Module .\src\AzDO.psm1
+Install-Module AzDOCmd
 ```
 
 ## Development
@@ -34,8 +34,8 @@ $script:AzApiHeaders = @{
 The function's `process` block should start with the following code to process the `$Project` parameter if it was passed from the pipeline:
 
 ```powershell
-. $PSScriptRoot\..\..\private\Get-AzApiProjectName.ps1
-$Project = $Project | Get-AzApiProjectName
+. $PSScriptRoot\..\..\private\Get-AzDOApiProjectName.ps1
+$Project = $Project | Get-AzDOApiProjectName
 ```
 
 And finally, each invocation of `Invoke-AzDORestApiMethod` should use the following pattern:
