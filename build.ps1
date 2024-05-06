@@ -1,8 +1,8 @@
 ﻿$BuildPSModule = @{
     Name        = 'AzDOCmd'
-    Version     = '0.0.3'
+    Version     = '0.0.4'
     Description = 'A module for interacting with Azure DevOps.'
-    Tags        = ('AzureDevOps', 'DevOps', 'Azure', 'Pipelines')
+    Tags        = ('PSEdition_Desktop', 'PSEdition_Core', 'Azure', 'AzureDevOps', 'AzurePipelines')
 }
 
 Push-Location -Path $PSScriptRoot
