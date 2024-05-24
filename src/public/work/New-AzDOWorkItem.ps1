@@ -27,9 +27,9 @@ https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/get-work-
 N/A
 #>
 function New-AzDOWorkItem {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
-        [String]$Title,
+        [String[]]$Title,
         [String]$Type = 'User Story',
         [Switch]$SuppressNotifications,
         [Switch]$NoRetry,
@@ -47,24 +47,32 @@ function New-AzDOWorkItem {
     }
 
     process {
-        foreach ($item in $Id) {
-            $body
-            # POST https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/${type}?api-version=7.1-preview.3
-            $workItem = Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                -Method Post `
-                -Project $Project `
-                -Endpoint "wit/workitems/$([Uri]::EscapeDataString($Type))" `
-                -Body $body `
-                -Params @(
-                    "suppressNotifications=$SuppressNotifications"
-                )
-                -NoRetry:$NoRetry
-            $workItem | Add-Member `
-                -MemberType NoteProperty `
-                -Name project `
-                -Value $workItem.fields.'System.TeamProject'
-            $workItem
+        foreach ($item in $Title) {
+            if ($PSCmdlet.ShouldProcess($CollectionUri, "Create work item $item of type $Type in project $Project")) {
+                $body = @(
+                    [PSCustomObject]@{
+                        op    = 'add'
+                        path = '/fields/System.Title'
+                        value = $item
+                    }
+                ) | ConvertTo-Json -Compress
+
+                $workItem = Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    -Method Post `
+                    -Project $Project `
+                    -Endpoint "wit/workitems/$([Uri]::EscapeDataString($Type))" `
+                    -Body $body `
+                    -Params @(
+                        "suppressNotifications=$SuppressNotifications"
+                    )
+                    -NoRetry:$NoRetry
+                $workItem | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name project `
+                    -Value $workItem.fields.'System.TeamProject'
+                $workItem
+            }
         }
     }
 }

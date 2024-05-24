@@ -33,7 +33,7 @@ https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/update
 General notes
 #>
 function Set-AzDOWorkItemField {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
         [String[]]$Id,
@@ -60,22 +60,24 @@ function Set-AzDOWorkItemField {
         $Project = $Project | Get-AzDOApiProjectName
 
         foreach ($number in $id) {
-            $body = @(
-                @{
-                    op    = 'add'
-                    path  = "/fields/System.$Name"
-                    value = $Value
-                }
-            ) | ConvertTo-Json
-            $body = "[`n$body`n]"
-
-            Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                -Method Patch `
-                -Project $Project `
-                -Endpoint "wit/workitems/$number" `
-                -Body $body `
-                -NoRetry:$NoRetry
+            if ($PSCmdlet.ShouldProcess($CollectionUri, "Update work item $number with field $Name to value $Value in project $Project")) {
+                $body = @(
+                    @{
+                        op    = 'add'
+                        path  = "/fields/System.$Name"
+                        value = $Value
+                    }
+                ) | ConvertTo-Json
+                $body = "[`n$body`n]"
+    
+                Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    -Method Patch `
+                    -Project $Project `
+                    -Endpoint "wit/workitems/$number" `
+                    -Body $body `
+                    -NoRetry:$NoRetry
+            }
         }
     }
 }
