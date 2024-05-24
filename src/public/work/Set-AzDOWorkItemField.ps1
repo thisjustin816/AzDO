@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Updates a field in a work item.
 
@@ -69,7 +69,7 @@ function Set-AzDOWorkItemField {
                     }
                 ) | ConvertTo-Json
                 $body = "[`n$body`n]"
-    
+
                 Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     -Method Patch `
