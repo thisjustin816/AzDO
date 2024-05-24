@@ -24,6 +24,7 @@ jobs:
         if: always()
         with:
           files: tests/testResults.xml
+          github_token: ${{ github.token }}
 
       - name: Publish Code Coverage
         uses: 5monkeys/cobertura-action@v14
