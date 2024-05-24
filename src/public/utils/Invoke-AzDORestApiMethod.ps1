@@ -111,7 +111,7 @@ function Invoke-AzDORestApiMethod {
     $restUri = $CollectionUri
 
     if (![String]::isNullOrEmpty($Project)) {
-        $restUri += "$Project/"
+        $restUri += [Uri]::EscapeDataString($Project) + '/'
     }
 
     if ($Params.Length -eq 0) {
