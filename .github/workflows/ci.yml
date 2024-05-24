@@ -1,31 +1,63 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
+    permissions:
+      checks: write # Needed for publishing test results
+      pull-requests: write # Needed for publishing test results
+
     runs-on: windows-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
       - name: build
         shell: pwsh
         run: ./build.ps1
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        if: always()
+        with:
+          files: tests/testResults.xml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.x
+          dotnet-quality: 'ga'
+
+      - name: ReportGenerator
+        # https://reportgenerator.io/usage
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.3.0
+        with:
+          reports: tests/coverage.xml
+          targetdir: tests/coverage
+          reporttypes: Cobertura
+          sourcedirs: src
+
+      - name: Publish Code Coverage
+        uses: 5monkeys/cobertura-action@v14
+        if: github.event_name == 'pull_request'
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          path: tests/coverage/Cobertura.xml
+          minimum_coverage: 75
+          fail_below_threshold: false
+          only_changed_files: true
+
+      - name: publish
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: ./publish.ps1
+        env:
+          PSGALLERYAPIKEY: ${{ secrets.PSGALLERYAPIKEY }}
