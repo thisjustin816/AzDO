@@ -10,6 +10,10 @@ on:
 
 jobs:
   build:
+    permissions:
+      checks: write # Needed for publishing test results
+      pull-requests: write # Needed for publishing test results
+
     runs-on: windows-latest
 
     steps:
