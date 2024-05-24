@@ -30,11 +30,17 @@ jobs:
           files: tests/testResults.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+      
+      - name: Convert Pester Coverage Report
+        run: reportgenerator "-reports:tests/coverage.xml" "-targetdir:tests/coverage" "-reporttypes:Cobertura"
+      
       - name: Publish Code Coverage
         uses: 5monkeys/cobertura-action@v14
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          path: tests/coverage.xml
+          path: tests/coverage/Cobertura.xml
           minimum_coverage: 75
           fail_below_threshold: false
           only_changed_files: true
