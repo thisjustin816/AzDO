@@ -67,6 +67,11 @@ function New-AzDOWorkItem {
                     },
                     [PSCustomObject]@{
                         op    = 'add'
+                        path  = '/fields/System.AreaPath'
+                        value = $AreaPath
+                    },
+                    [PSCustomObject]@{
+                        op    = 'add'
                         path  = '/fields/System.IterationPath'
                         value = $IterationPath
                     },
