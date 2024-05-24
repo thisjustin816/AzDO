@@ -29,10 +29,20 @@ N/A
 function New-AzDOWorkItem {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
+        [Parameter(Mandatory = $true, Position = 0)]
         [String[]]$Title,
         [String]$Type = 'User Story',
+        [Parameter(Mandatory = $true)]
+        [String]$AreaPath,
+        [Parameter(Mandatory = $true)]
+        [String]$IterationPath,
+        [String]$Description = 'Created via AzDOCmd\New-AzDOWorkItem',
+        [Int]$ParentId,
+        [Int]$ChildId,
         [Switch]$SuppressNotifications,
         [Switch]$NoRetry,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias('Id')]
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
         [String]$Pat = $env:SYSTEM_ACCESSTOKEN
@@ -52,20 +62,51 @@ function New-AzDOWorkItem {
                 $body = @(
                     [PSCustomObject]@{
                         op    = 'add'
-                        path = '/fields/System.Title'
+                        path  = '/fields/System.Title'
                         value = $item
+                    },
+                    [PSCustomObject]@{
+                        op    = 'add'
+                        path  = '/fields/System.IterationPath'
+                        value = $IterationPath
+                    },
+                    [PSCustomObject]@{
+                        op    = 'add'
+                        path  = '/fields/System.Description'
+                        value = $Description
                     }
-                ) | ConvertTo-Json -Compress
+                )
+                if ($ParentId) {
+                    $body += [PSCustomObject]@{
+                        op    = 'add'
+                        path  = '/relations/-'
+                        value = @{
+                            rel = 'System.LinkTypes.Hierarchy-Reverse'
+                            url = "$CollectionUri/$Project/_apis/wit/workItems/$ParentId"
+                        }
+                    }
+                }
+                if ($ChildId) {
+                    $body += [PSCustomObject]@{
+                        op    = 'add'
+                        path  = '/relations/-'
+                        value = @{
+                            rel = 'System.LinkTypes.Hierarchy-Forward'
+                            url = "$CollectionUri/$Project/_apis/wit/workItems/$ChildId"
+                        }
+                    }
+                }
 
                 $workItem = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     -Method Post `
                     -Project $Project `
                     -Endpoint "wit/workitems/$([Uri]::EscapeDataString($Type))" `
-                    -Body $body `
+                    -Body ( $body | ConvertTo-Json -Compress ) `
                     -Params @(
                         "suppressNotifications=$SuppressNotifications"
-                    )
+                        '$expand=All'
+                    ) `
                     -NoRetry:$NoRetry
                 $workItem | Add-Member `
                     -MemberType NoteProperty `
