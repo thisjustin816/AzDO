@@ -23,8 +23,16 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
         if: always()
         with:
-          files: |
-            tests/*.xml
+          files: tests/testResults.xml
+
+      - name: Publish Code Coverage
+        uses: 5monkeys/cobertura-action@v14
+        with:
+          repo_token: ${{ github.token }}
+          path: tests/coverage.xml
+          minimum_coverage: 75
+          fail_below_threshold: false
+          only_changed_files: true
 
       - name: publish
         if: github.ref == 'refs/heads/main'
