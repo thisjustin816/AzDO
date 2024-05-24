@@ -19,6 +19,13 @@ jobs:
         shell: pwsh
         run: ./build.ps1
 
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            tests/*.xml
+
       - name: publish
         if: github.ref == 'refs/heads/main'
         shell: pwsh
