@@ -24,12 +24,12 @@ jobs:
         if: always()
         with:
           files: tests/testResults.xml
-          github_token: ${{ github.token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Code Coverage
         uses: 5monkeys/cobertura-action@v14
         with:
-          repo_token: ${{ github.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           path: tests/coverage.xml
           minimum_coverage: 75
           fail_below_threshold: false
