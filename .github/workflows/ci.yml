@@ -28,12 +28,16 @@ jobs:
           $moduleName = $build[1].Name
           Write-Host "MODULENAME=$moduleName"
 
+          "$moduleVersion-$($build[1].Prerelease)"
           $moduleVersion = $build[1].Version
           if ($null -ne $build[1].Prerelease) {
               $moduleVersion = "$moduleVersion-$($build[1].Prerelease)"
           }
           Write-Host "MODULEVERSION=$moduleVersion"
 
+      - name: Output Tag Info
+        shell: pwsh
+        run: |
           Write-Host "$env:MODULENAME current commit will be tagged with $env:MODULEVERSION"
 
       - name: Publish Test Results
