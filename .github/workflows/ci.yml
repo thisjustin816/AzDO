@@ -56,8 +56,25 @@ jobs:
           only_changed_files: true
 
       - name: publish
-        #if: github.ref == 'refs/heads/main'
+        #if: success() && github.ref == 'refs/heads/main'
         shell: pwsh
-        run: ./publish.ps1
+        run: |
+          Write-Host "VERSION=$( Get-ChildItem -Path .\out -Directory | Select-Object -Last 1 | Select-Object -ExpandProperty Name )"
+          Write-Host "Stored version: $env:VERSION"
+          ./publish.ps1
         env:
           PSGALLERYAPIKEY: ${{ secrets.PSGALLERYAPIKEY }}
+
+      - name: Tag commit
+        if: success() && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const { owner, repo } = context.repo
+            const tag = `release-${context.sha}`
+            await github.git.createRef({
+              owner,
+              repo,
+              ref: `refs/tags/${tag}`,
+              sha: context.sha
+            })
