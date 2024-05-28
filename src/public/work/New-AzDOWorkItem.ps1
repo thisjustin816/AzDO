@@ -71,6 +71,12 @@ function New-AzDOWorkItem {
                     $CollectionUri, "Create work item $item of type $Type in project $Project"
                 )
             ) {
+                $descriptionFieldName = if ($Type -eq 'Bug') {
+                    'Microsoft.VSTS.TCM.ReproSteps'
+                }
+                else {
+                    'System.Description'
+                }
                 $body = @(
                     [PSCustomObject]@{
                         op    = 'add'
@@ -80,7 +86,7 @@ function New-AzDOWorkItem {
                     },
                     [PSCustomObject]@{
                         op    = 'add'
-                        path  = '/fields/System.Description'
+                        path  = "/fields/$descriptionFieldName"
                         value = $Description
                     }
                 )

@@ -71,7 +71,7 @@ jobs:
           only_changed_files: true
 
       - name: publish
-        #if: success() && github.ref == 'refs/heads/main'
+        if: success() #&& github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
           ./publish.ps1
@@ -79,7 +79,7 @@ jobs:
           PSGALLERYAPIKEY: ${{ secrets.PSGALLERYAPIKEY }}
 
       - name: Tag commit
-        #if: success() && github.ref == 'refs/heads/main'
+        if: success() #&& github.ref == 'refs/heads/main'
         uses: actions/github-script@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
