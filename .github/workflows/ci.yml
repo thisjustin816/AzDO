@@ -71,7 +71,7 @@ jobs:
           only_changed_files: true
 
       - name: publish
-        if: success() && github.ref == 'refs/heads/main'
+        #if: success() && github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
           ./publish.ps1
