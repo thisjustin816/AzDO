@@ -21,7 +21,7 @@ An Azure DevOps Personal Access Token authorized to read work items.
 Get-AzDOWorkItem -Id 12345 -Project MyProject
 
 .LINK
-https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/get-work-item
+https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/create
 
 .NOTES
 N/A
@@ -57,23 +57,28 @@ function New-AzDOWorkItem {
     }
 
     process {
+        $validType = Get-AzDOWorkItemType `
+            -Type $Type `
+            -NoRetry:$NoRetry `
+            -Project $Project `
+            -CollectionUri $CollectionUri `
+            -Pat $Pat
+        if (!$validType) {
+            throw "Invalid work item type: $Type"
+        }
+
         foreach ($item in $Title) {
-            if ($PSCmdlet.ShouldProcess($CollectionUri, "Create work item $item of type $Type in project $Project")) {
+            if (
+                $PSCmdlet.ShouldProcess(
+                    $CollectionUri, "Create work item $item of type $Type in project $Project"
+                )
+            ) {
                 $body = @(
                     [PSCustomObject]@{
                         op    = 'add'
                         path  = '/fields/System.Title'
+                        from  = $null
                         value = $item
-                    },
-                    [PSCustomObject]@{
-                        op    = 'add'
-                        path  = '/fields/System.AreaPath'
-                        value = $AreaPath
-                    },
-                    [PSCustomObject]@{
-                        op    = 'add'
-                        path  = '/fields/System.IterationPath'
-                        value = $IterationPath
                     },
                     [PSCustomObject]@{
                         op    = 'add'
@@ -81,6 +86,26 @@ function New-AzDOWorkItem {
                         value = $Description
                     }
                 )
+                if ($AreaPath) {
+                    if ($AreaPath -notlike "$Project*") {
+                        $AreaPath = $Project + '\' + $AreaPath
+                    }
+                    $body += [PSCustomObject]@{
+                        op    = 'add'
+                        path  = '/fields/System.AreaPath'
+                        value = $AreaPath
+                    }
+                }
+                if ($IterationPath) {
+                    if ($IterationPath -notlike "$Project*") {
+                        $IterationPath = $Project + '\' + $IterationPath
+                    }
+                    $body += [PSCustomObject]@{
+                        op    = 'add'
+                        path  = '/fields/System.IterationPath'
+                        value = $IterationPath
+                    }
+                }
                 if ($ParentId) {
                     $body += [PSCustomObject]@{
                         op    = 'add'
@@ -106,8 +131,8 @@ function New-AzDOWorkItem {
                     @script:AzApiHeaders `
                     -Method Post `
                     -Project $Project `
-                    -Endpoint "wit/workitems/$([Uri]::EscapeDataString($Type))" `
-                    -Body ( $body | ConvertTo-Json -Compress ) `
+                    -Endpoint "wit/workitems/`$$([Uri]::EscapeDataString($Type))" `
+                    -Body $( $body | ConvertTo-Json -AsArray -Compress ) `
                     -Params @(
                         "suppressNotifications=$SuppressNotifications"
                         '$expand=All'

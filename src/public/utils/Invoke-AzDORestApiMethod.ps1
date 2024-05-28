@@ -182,13 +182,13 @@ function Invoke-AzDORestApiMethod {
             try {
                 $response = $null
                 Write-Verbose -Message "$Method $restUri"
-                $output = Invoke-RestMethod @restArgs
+                $restOutput = Invoke-RestMethod @restArgs
                 $ProgressPreference = $cachedProgressPreference
-                if ($output.value) {
-                    $output.value
+                if ($restOutput.value) {
+                    $restOutput.value
                 }
-                elseif ($output.count -eq 0) { }
-                elseif ($output -match 'Azure DevOps Services | Sign In') {
+                elseif ($restOutput.count -eq 0) { }
+                elseif ($restOutput -match 'Azure DevOps Services | Sign In') {
                     class AzLoginException : Exception {
                         [System.Object]$Response
                         AzLoginException($Message) : base($Message) {
@@ -203,7 +203,7 @@ function Invoke-AzDORestApiMethod {
                     throw [AzLoginException]::New('Not authorized.')
                 }
                 else {
-                    $output
+                    $restOutput
                 }
                 break
             }
