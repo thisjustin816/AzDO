@@ -35,7 +35,7 @@ jobs:
       - name: Output Tag Info
         shell: pwsh
         run: |
-          Write-Host "${{ steps.build.outputs.moduleName }} current commit will be tagged with ${{ steps.build.outputs.moduleVersion }}"
+          Write-Host "${{ steps.build.outputs.moduleName }} current commit will be tagged with ${{ steps.build.outputs.moduleVersion }} on a successful publish."
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
@@ -70,7 +70,7 @@ jobs:
           only_changed_files: true
 
       - name: publish
-        if: success() && github.ref == 'refs/heads/main'
+        #if: success() && github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
           ./publish.ps1
@@ -78,7 +78,7 @@ jobs:
           PSGALLERYAPIKEY: ${{ secrets.PSGALLERYAPIKEY }}
 
       - name: Tag commit
-        if: success() && github.ref == 'refs/heads/main'
+        #if: success() && github.ref == 'refs/heads/main'
         uses: actions/github-script@v5
         with:
           script: |
