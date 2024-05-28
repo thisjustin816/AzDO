@@ -12,6 +12,7 @@ jobs:
   build:
     permissions:
       checks: write # Needed for publishing test results
+      contents: write # Needed for tagging with the released version
       pull-requests: write # Needed for publishing test results
 
     runs-on: windows-latest
@@ -81,6 +82,7 @@ jobs:
         #if: success() && github.ref == 'refs/heads/main'
         uses: actions/github-script@v5
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo
             const tag = `${{ steps.build.outputs.moduleVersion }}`
