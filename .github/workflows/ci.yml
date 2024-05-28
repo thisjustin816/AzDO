@@ -84,7 +84,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo
             const tag = `${{ steps.build.outputs.moduleVersion }}`
-            await octokit.git.createRef({
+            await github.rest.git.createRef({
               owner,
               repo,
               ref: `refs/tags/${tag}`,
