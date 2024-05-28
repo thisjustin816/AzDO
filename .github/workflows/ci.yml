@@ -20,25 +20,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: build
+        id: build
         shell: pwsh
         run: |
           $build = ./build.ps1
           $build
 
           $moduleName = $build[1].Name
-          Write-Host "MODULENAME=$moduleName"
+          echo "::set-output name=moduleName::$moduleName"
 
-          "$moduleVersion-$($build[1].Prerelease)"
-          $moduleVersion = $build[1].Version
-          if ($null -ne $build[1].Prerelease) {
-              $moduleVersion = "$moduleVersion-$($build[1].Prerelease)"
-          }
-          Write-Host "MODULEVERSION=$moduleVersion"
+          $moduleVersion = $build[1].ModuleBase | Split-Path -Leaf
+          echo "::set-output name=moduleVersion::$moduleVersion"
 
       - name: Output Tag Info
         shell: pwsh
         run: |
-          Write-Host "$env:MODULENAME current commit will be tagged with $env:MODULEVERSION"
+          Write-Host "${{ steps.build.outputs.moduleName }} current commit will be tagged with ${{ steps.build.outputs.moduleVersion }}"
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
@@ -86,7 +83,7 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo
-            const tag = `${process.env.MODULEVERSION}`
+            const tag = `${{ steps.build.outputs.moduleVersion }}`
             await github.git.createRef({
               owner,
               repo,
