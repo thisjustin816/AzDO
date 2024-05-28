@@ -32,9 +32,7 @@ function New-AzDOWorkItem {
         [Parameter(Mandatory = $true, Position = 0)]
         [String[]]$Title,
         [String]$Type = 'User Story',
-        [Parameter(Mandatory = $true)]
         [String]$AreaPath,
-        [Parameter(Mandatory = $true)]
         [String]$IterationPath,
         [String]$Description = 'Created via AzDOCmd\New-AzDOWorkItem',
         [Int]$ParentId,

@@ -1,6 +1,6 @@
 ﻿$BuildPSModule = @{
     Name        = 'AzDOCmd'
-    Version     = '1.1.0-preview3'
+    Version     = '1.1.0-preview4'
     Description = 'A module for interacting with Azure DevOps.'
     Tags        = ('PSEdition_Desktop', 'PSEdition_Core', 'Azure', 'AzureDevOps', 'AzurePipelines')
 }
