@@ -21,7 +21,20 @@ jobs:
 
       - name: build
         shell: pwsh
-        run: ./build.ps1
+        run: |
+          $build = ./build.ps1
+          $build
+
+          $moduleName = $build[1].Name
+          Write-Host "MODULENAME=$moduleName"
+
+          $moduleVersion = $build[1].Version
+          if ($null -ne $build[1].Prerelease) {
+              $moduleVersion = "$moduleVersion-$($build[1].Prerelease)"
+          }
+          Write-Host "MODULEVERSION=$moduleVersion"
+
+          Write-Host "$env:MODULENAME current commit will be tagged with $env:MODULEVERSION"
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
@@ -56,11 +69,9 @@ jobs:
           only_changed_files: true
 
       - name: publish
-        #if: success() && github.ref == 'refs/heads/main'
+        if: success() && github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
-          Write-Host "VERSION=$( Get-ChildItem -Path .\out -Directory | Select-Object -Last 1 | Select-Object -ExpandProperty Name )"
-          Write-Host "Stored version: $env:VERSION"
           ./publish.ps1
         env:
           PSGALLERYAPIKEY: ${{ secrets.PSGALLERYAPIKEY }}
@@ -71,7 +82,7 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo
-            const tag = `release-${context.sha}`
+            const tag = `${process.env.MODULEVERSION}`
             await github.git.createRef({
               owner,
               repo,
