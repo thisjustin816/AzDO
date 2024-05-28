@@ -88,3 +88,8 @@ The folder structure should be maintained like the example below:
     ├───Verb-Noun.ps1
     └───Verb-Noun.Tests.ps1
 ```
+
+### Module TODOs
+
+- [ ] Implement more API wrappers
+- [ ] Figure out a way to test live apis in the GitHub Actions pipeline
