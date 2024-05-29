@@ -32,9 +32,7 @@ function New-AzDOWorkItem {
         [Parameter(Mandatory = $true, Position = 0)]
         [String[]]$Title,
         [String]$Type = 'User Story',
-        [Parameter(Mandatory = $true)]
         [String]$AreaPath,
-        [Parameter(Mandatory = $true)]
         [String]$IterationPath,
         [String]$Description = 'Created via AzDOCmd\New-AzDOWorkItem',
         [Int]$ParentId,
@@ -73,6 +71,12 @@ function New-AzDOWorkItem {
                     $CollectionUri, "Create work item $item of type $Type in project $Project"
                 )
             ) {
+                $descriptionFieldName = if ($Type -eq 'Bug') {
+                    'Microsoft.VSTS.TCM.ReproSteps'
+                }
+                else {
+                    'System.Description'
+                }
                 $body = @(
                     [PSCustomObject]@{
                         op    = 'add'
@@ -82,7 +86,7 @@ function New-AzDOWorkItem {
                     },
                     [PSCustomObject]@{
                         op    = 'add'
-                        path  = '/fields/System.Description'
+                        path  = "/fields/$descriptionFieldName"
                         value = $Description
                     }
                 )
