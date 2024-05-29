@@ -72,7 +72,7 @@ jobs:
 
       - name: publish
         id: publish
-        if: success() && github.ref == 'refs/heads/main'
+        if: success() #&& github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
           ./publish.ps1

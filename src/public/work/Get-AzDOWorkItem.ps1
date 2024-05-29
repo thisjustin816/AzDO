@@ -83,7 +83,7 @@ function Get-AzDOWorkItem {
                 -Endpoint "wit/workitems/$item" `
                 -Params @(
                     '$expand=All'
-                )
+                ) `
                 -NoRetry:$NoRetry
             $workItem | Add-Member `
                 -MemberType NoteProperty `
