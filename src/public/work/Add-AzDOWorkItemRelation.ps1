@@ -87,7 +87,7 @@ function Add-AzDOWorkItemRelation {
                                 url = $relatedWorkItem.url
                             }
                         }
-                    ) | ConvertTo-Json -Compress
+                    ) | ConvertTo-Json -Compress -AsArray
 
                     Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `

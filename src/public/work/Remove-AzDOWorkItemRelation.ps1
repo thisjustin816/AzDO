@@ -97,7 +97,7 @@ function Remove-AzDOWorkItemRelation {
                         -Method Patch `
                         -Project $Project `
                         -Endpoint "wit/workitems/$WorkItemId" `
-                        -Body ( $body | ConvertTo-Json -Compress ) `
+                        -Body ( $body | ConvertTo-Json -Compress -AsArray ) `
                         -NoRetry:$NoRetry
                 }
             }
