@@ -36,7 +36,7 @@ function Set-AzDOWorkItemField {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
-        [String[]]$Id,
+        [Int[]]$Id,
         [Alias('Field')]
         [String]$Name,
         [String]$Value,

@@ -58,7 +58,7 @@ function Get-AzDOWorkItem {
             $body = @{
                 query = "SELECT [System.Id] FROM workitems WHERE [System.Title] CONTAINS '$Title'"
             } | ConvertTo-Json -Compress
-    
+
             $Id = @(
                 Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
