@@ -68,7 +68,12 @@ function Remove-AzDOWorkItemRelation {
         $apiRelationType = $relationTypeMap[$RelationType]
 
         foreach ($workItemId in $Id) {
-            $workItem = Get-AzDOWorkItem -CollectionUri $CollectionUri -Project $Project -WorkItemId $workItemId -PAT $PAT
+            $workItem = Get-AzDOWorkItem `
+                -Id $workItemId `
+                -Project $Project `
+                -NoRetry:$NoRetry `
+                -CollectionUri $CollectionUri `
+                -Pat $Pat
 
             # Find the index of the link to remove
             $linkIndex = @(
