@@ -15,3 +15,5 @@ if (!$env:GITHUB_ACTIONS) {
 Build-PSModule @BuildPSModule
 Test-PSModule -Name $BuildPSModule['Name'] -Tag Unit
 Pop-Location
+
+Get-Module JBUtils, PSModuleUtils
