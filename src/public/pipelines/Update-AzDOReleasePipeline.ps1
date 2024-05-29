@@ -36,7 +36,7 @@ steps:
 #>
 
 function Update-AzDOReleasePipeline {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias('id')]
@@ -60,12 +60,17 @@ function Update-AzDOReleasePipeline {
         . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
         $Project = $Project | Get-AzDOApiProjectName
 
-        Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Put `
-            -Project $Project `
-            -Endpoint "release/definitions/$PipelineId" `
-            -Body ( Get-Content -Path $JsonFilePath -Encoding UTF8 | Out-String ) `
-            -NoRetry:$NoRetry
+        if ($PSCmdlet.ShouldProcess(
+            "Release pipeline: $PipelineId",
+            "Update release pipeline in project $Project with values from $JsonFilePath."
+        )) {
+            Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Put `
+                -Project $Project `
+                -Endpoint "release/definitions/$PipelineId" `
+                -Body ( Get-Content -Path $JsonFilePath -Encoding UTF8 | Out-String ) `
+                -NoRetry:$NoRetry
+        }
     }
 }

@@ -41,7 +41,7 @@ steps:
 #>
 
 function Set-AzDOReleaseRetention {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias('id')]
@@ -106,16 +106,21 @@ function Set-AzDOReleaseRetention {
                 }
         }
 
-        Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Put `
-            -SubDomain vsrm `
-            -Project $Project `
-            -Endpoint "release/definitions/$PipelineId" `
-            -Body ( $exportedDefinition | ConvertTo-Json -Depth 10 -Compress ) `
-            -NoRetry:$NoRetry |
-            Select-Object -ExpandProperty environments |
-            Where-Object -FilterScript { $environmentsToSet -contains $_.name } |
-            Select-Object -Property id, name, retentionPolicy
+        if ($PSCmdlet.ShouldProcess(
+            "Pipeline: $PipelineId",
+            "Update retention policy to keep $ReleasesToKeep builds and $DaysToKeep days."
+        )) {
+            Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Put `
+                -SubDomain vsrm `
+                -Project $Project `
+                -Endpoint "release/definitions/$PipelineId" `
+                -Body ( $exportedDefinition | ConvertTo-Json -Depth 10 -Compress ) `
+                -NoRetry:$NoRetry |
+                Select-Object -ExpandProperty environments |
+                Where-Object -FilterScript { $environmentsToSet -contains $_.name } |
+                Select-Object -Property id, name, retentionPolicy
+        }
     }
 }

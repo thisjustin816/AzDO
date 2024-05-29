@@ -35,17 +35,12 @@ function Export-AzDOPipeline {
         [Parameter(ValueFromPipeline = $true)]
         [System.Object[]]$PipelineDefinition,
         [string]$Destination = 'azure-pipelines',
-        [Switch]$NoRetry,
-        [String[]]$Project = $env:SYSTEM_TEAMPROJECT,
-        [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
         [string]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     begin {
         $script:AzApiHeaders = @{
-            Headers       = Initialize-AzDORestApi -Pat $Pat
-            CollectionUri = $CollectionUri
-            ApiVersion    = '7.2-preview.4'
+            Headers = Initialize-AzDORestApi -Pat $Pat
         }
 
         $null = New-Item -Path $Destination -ItemType Directory -Force
