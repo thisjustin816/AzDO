@@ -8,6 +8,9 @@ Get a Work Item's info.
 .PARAMETER Id
 ID of the work item.
 
+.PARAMETER Title
+Title of the work item.
+
 .PARAMETER Project
 Project that the work item is in.
 
@@ -33,7 +36,7 @@ function Get-AzDOWorkItem {
     [CmdletBinding(DefaultParameterSetName = 'ID')]
     param (
         [Parameter(ParameterSetName = 'ID', Mandatory = $true, Position = 0, ValueFromPipeline = $true)]
-        [String[]]$Id,
+        [Int[]]$Id,
         [Parameter(ParameterSetName = 'Title', Mandatory = $true, Position = 0)]
         [String]$Title,
         [Switch]$NoRetry,
