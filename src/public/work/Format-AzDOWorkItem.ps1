@@ -40,7 +40,7 @@ function Format-AzDOWorkItem {
                 Title       = $WorkItem.fields.'System.Title'
                 State       = $WorkItem.fields.'System.State'
                 AssignedTo  = $WorkItem.fields.'System.AssignedTo'
-                Url         = $WorkItem.url
+                Url         = $WorkItem._links.html.href
             }
         }
         catch {
