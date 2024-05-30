@@ -1,5 +1,4 @@
-﻿
-<#
+﻿<#
 .SYNOPSIS
 Gets information for an Azure DevOps project.
 

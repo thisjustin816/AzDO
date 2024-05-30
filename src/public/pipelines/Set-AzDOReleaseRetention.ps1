@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Updates a release pipeline definition.
 
@@ -41,7 +41,7 @@ steps:
 #>
 
 function Set-AzDOReleaseRetention {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias('id')]
@@ -98,7 +98,7 @@ function Set-AzDOReleaseRetention {
 
         foreach ($env in $environmentsToSet) {
             $exportedDefinition.environments |
-                Where-Object -Property name -eq $env |
+                Where-Object -Property name -EQ $env |
                 ForEach-Object -Process {
                     $_.retentionPolicy.daysToKeep = $DaysToKeep
                     $_.retentionPolicy.releasesToKeep = $ReleasesToKeep
@@ -106,16 +106,21 @@ function Set-AzDOReleaseRetention {
                 }
         }
 
-        Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Put `
-            -SubDomain vsrm `
-            -Project $Project `
-            -Endpoint "release/definitions/$PipelineId" `
-            -Body ( $exportedDefinition | ConvertTo-Json -Depth 10 -Compress ) `
-            -NoRetry:$NoRetry |
-            Select-Object -ExpandProperty environments |
-            Where-Object -FilterScript { $environmentsToSet -contains $_.name } |
-            Select-Object -Property id, name, retentionPolicy
+        if ($PSCmdlet.ShouldProcess(
+            "Pipeline: $PipelineId",
+            "Update retention policy to keep $ReleasesToKeep builds and $DaysToKeep days."
+        )) {
+            Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Put `
+                -SubDomain vsrm `
+                -Project $Project `
+                -Endpoint "release/definitions/$PipelineId" `
+                -Body ( $exportedDefinition | ConvertTo-Json -Depth 10 -Compress ) `
+                -NoRetry:$NoRetry |
+                Select-Object -ExpandProperty environments |
+                Where-Object -FilterScript { $environmentsToSet -contains $_.name } |
+                Select-Object -Property id, name, retentionPolicy
+        }
     }
 }

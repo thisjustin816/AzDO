@@ -31,7 +31,7 @@ function Connect-AzDO {
     $currentAzDOConnection = Get-AzDOConnection
     if ($null -ne ( $currentAzDOConnection.PSObject.Properties.Value | Where-Object -FilterScript {$_} )) {
         Write-Warning -Message 'An existing Azure DevOps connection was found.'
-        Write-Host -Object ( $currentAzDOConnection | Format-List | Out-String )
+        Write-Information -MessageData ( $currentAzDOConnection | Format-List | Out-String ) -InformationAction Continue
         $response = Read-Host -Prompt 'Would you like to overwrite the existing connection? (y/n)'
         if ($response.ToLower() -ne 'y') {
             return

@@ -1,3 +1,28 @@
+﻿<#
+.SYNOPSIS
+${1:Short description}
+
+.DESCRIPTION
+${2:Long description}
+
+.PARAMETER InputObject
+${3:Parameter description}
+
+.PARAMETER NoRetry
+${4:Parameter description}
+
+.PARAMETER CollectionUri
+${5:Parameter description}
+
+.PARAMETER Pat
+${6:Parameter description}
+
+.EXAMPLE
+${7:An example}
+
+.NOTES
+${8:General notes}
+#>
 function Add-AzDOProject {
     [CmdletBinding()]
     param (
