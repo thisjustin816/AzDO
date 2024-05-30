@@ -8,9 +8,7 @@ A module for interacting with Azure DevOps.
 Install-Module AzDOCmd
 ```
 
-## Development
-
-### Azure DevOps API Functions
+## Azure DevOps API Functions
 
 For functions that wrap an Azure DevOps API, there are some standard parameters and script blocks that should be used. All functions should include the following parameters and default values as the last ones in the `param` block:
 
