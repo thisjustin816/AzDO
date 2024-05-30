@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Updates a release pipeline definition.
 
@@ -98,7 +98,7 @@ function Set-AzDOReleaseRetention {
 
         foreach ($env in $environmentsToSet) {
             $exportedDefinition.environments |
-                Where-Object -Property name -eq $env |
+                Where-Object -Property name -EQ $env |
                 ForEach-Object -Process {
                     $_.retentionPolicy.daysToKeep = $DaysToKeep
                     $_.retentionPolicy.releasesToKeep = $ReleasesToKeep
