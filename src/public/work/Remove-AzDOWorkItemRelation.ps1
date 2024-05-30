@@ -82,7 +82,7 @@ function Remove-AzDOWorkItemRelation {
                     ForEach-Object { $workItem.relations.IndexOf($_) }
             )
 
-            if ($linkIndex) {
+            if ($null -ne $linkIndex) {
                 $body = @()
                 $body += foreach ($index in $linkIndex) {
                     @{
