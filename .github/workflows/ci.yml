@@ -10,6 +10,6 @@ on:
 
 jobs:
   build:
-    uses: thisjustin816/reusable-workflows/.github/workflows/ps/ci.yml@main
+    uses: thisjustin816/reusable-workflows/.github/workflows/ps-ci.yml@main
     with:
       publish: false

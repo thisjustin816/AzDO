@@ -22,4 +22,4 @@ permissions:
 
 jobs:
   build:
-    uses: thisjustin816/reusable-workflows/.github/workflows/ps/powershell.yml@main
+    uses: thisjustin816/reusable-workflows/.github/workflows/ps-scriptAnalyzer.yml@main
