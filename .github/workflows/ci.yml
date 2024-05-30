@@ -16,4 +16,4 @@ jobs:
       pull-requests: write # Needed for publishing test results
     uses: thisjustin816/reusable-workflows/.github/workflows/ps-ci.yml@main
     with:
-      publish: true
+      publish: 'true'
