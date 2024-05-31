@@ -153,8 +153,8 @@ function Get-AzDOPipelineRun {
     }
 
     process {
-        . $PSScriptRoot/../../private/Get-AzApiProjectName.ps1
-        $Project = $Project | Get-AzApiProjectName
+        . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
+        $Project = $Project | Get-AzDOApiProjectName
 
         foreach ($id in $BuildId) {
             foreach ($projectName in $Project) {

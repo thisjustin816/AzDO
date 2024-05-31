@@ -8,6 +8,8 @@ This function takes a work item object and returns a custom object with the foll
 - Type
 - Title
 - State
+- AreaPath
+- IterationPath
 - AssignedTo
 - Url
 
@@ -25,23 +27,40 @@ function Format-AzDOWorkItem {
     param (
         [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true)]
         [ValidateScript({
-            $_.PSObject.Properties.Name -contains 'id' -and
-            $_.PSObject.Properties.Name -contains 'fields' -and
-            $_.PSObject.Properties.Name -contains 'url'
-        })]
-        [System.Object]$WorkItem
+                $_.PSObject.Properties.Name -contains 'id' -and
+                $_.PSObject.Properties.Name -contains 'fields' -and
+                $_.PSObject.Properties.Name -contains '_links'
+            })]
+        [System.Object]$WorkItem,
+        [Switch]$Expand
     )
 
     process {
         try {
-            [PSCustomObject]@{
-                Id          = $WorkItem.id
-                Type        = $WorkItem.fields.'System.WorkItemType'
-                Title       = $WorkItem.fields.'System.Title'
-                State       = $WorkItem.fields.'System.State'
-                AssignedTo  = $WorkItem.fields.'System.AssignedTo'
-                Url         = $WorkItem._links.html.href
+            $basicObject = @{
+                Id    = $WorkItem.id
+                Type  = $WorkItem.fields.'System.WorkItemType'
+                Title = $WorkItem.fields.'System.Title'
             }
+            $url = @{
+                Url = $WorkItem._links.html.href
+            }
+            $finalObject = $basicObject
+            if ($Expand) {
+                $expandedProperties = @{
+                    State         = $WorkItem.fields.'System.State'
+                    AreaPath      = $WorkItem.fields.'System.AreaPath'
+                    IterationPath = $WorkItem.fields.'System.IterationPath'
+                    AssignedTo    = $WorkItem.fields.'System.AssignedTo'
+                }
+                foreach ($key in $expandedProperties.Keys) {
+                    $finalObject[$key] = $expandedProperties[$key]
+                }
+            }
+            foreach ($key in $url.Keys) {
+                $finalObject[$key] = $url[$key]
+            }
+            [PSCustomObject]$finalObject
         }
         catch {
             Write-Error -Message "Failed to format work item: $($_.Exception.Message)"
