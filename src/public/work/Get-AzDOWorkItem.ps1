@@ -35,8 +35,8 @@ N/A
 function Get-AzDOWorkItem {
     [CmdletBinding(DefaultParameterSetName = 'ID')]
     param (
-        [Parameter(ParameterSetName = 'ID', Mandatory = $true, Position = 0, ValueFromPipeline = $true)]
-        [String[]]$Id,
+        [Parameter(ParameterSetName = 'ID', Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)]
+        [Int[]]$Id,
         [Parameter(ParameterSetName = 'Title', Mandatory = $true, Position = 0)]
         [String]$Title,
         [Switch]$NoRetry,
