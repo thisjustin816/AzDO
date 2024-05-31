@@ -17,4 +17,9 @@ Describe 'Unit Tests' -Tag 'Unit' {
         $workItem = Get-AzDOWorkItem 12345 -Project MyProject
         $workItem.project | Should -Be 'MyProject'
     }
+
+    It 'should take a work item as pipeline input' {
+        $workItem = Get-AzDOWorkItem 12345 -Project MyProject
+        $workItem | Get-AzDOWorkItem | Should -Not -BeNullOrEmpty
+    }
 }
