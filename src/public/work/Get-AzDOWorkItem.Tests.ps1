@@ -5,7 +5,7 @@ Describe 'Unit Tests' -Tag 'Unit' {
 
         Mock Invoke-AzDORestApiMethod -ModuleName AzDOCmd {
             [PSCustomObject]@{
-                id = $Id
+                id     = 12345
                 fields = [PSCustomObject]@{
                     'System.TeamProject' = $Project
                 }
