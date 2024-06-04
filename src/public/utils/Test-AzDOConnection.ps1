@@ -72,7 +72,7 @@ function Test-AzDOConnection {
             $authorizedPermission = $null
             $authorizedPermission = try {
                 switch ($orgPermission.Name) {
-                    'Agents' { Get-AzDOAgentPool @script:restParams }
+                    'Agents' { Get-AzDOAgentPool @script:restParams -Name 'Azure Pipelines' }
                     'Organization Info' { Get-AzDOProject @script:restParams }
                     'Packages' { Get-AzDOPackageFeed @script:restParams }
                 }
@@ -116,7 +116,7 @@ function Test-AzDOConnection {
                     switch ($permission.Name) {
                         'Packages' { Get-AzDOPackageFeed @script:restParams }
                         'Pipelines' { Get-AzDOPipeline @script:restParams }
-                        'Repositories' { ( Get-AzDORepository @script:restParams -Name $scope ).id }
+                        'Repositories' { ( Get-AzDORepository @script:restParams ).id }
                     }
                 }
                 catch {
