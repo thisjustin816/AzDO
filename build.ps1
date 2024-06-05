@@ -8,6 +8,7 @@
 Push-Location -Path $PSScriptRoot
 Install-Module -Name JBUtils -Force -AllowClobber
 Import-Module -Name "$PSScriptRoot/src/$($BuildPSModule['Name']).psm1" -Force
+Install-Module -Name Pester -SkipPublisherCheck -Force
 Install-Module -Name PSModuleUtils -Force
 if (!$env:GITHUB_ACTIONS) {
     Invoke-PSModuleAnalyzer -Fix
