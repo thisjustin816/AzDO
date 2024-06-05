@@ -9,6 +9,7 @@ Describe 'Unit Tests' -Tag 'Unit' {
                 'System.WorkItemType'  = 'User Story'
                 'System.Title'         = 'Work Item Title'
                 'System.State'         = 'Active'
+                'System.TeamProject'   = 'MyProject'
                 'System.AreaPath'      = 'MyProject\Area'
                 'System.IterationPath' = 'MyProject\Iteration'
                 'System.AssignedTo'    = 'John Doe'

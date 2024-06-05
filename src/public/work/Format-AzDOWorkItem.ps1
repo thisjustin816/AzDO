@@ -8,6 +8,7 @@ This function takes a work item object and returns a custom object with the foll
 - Type
 - Title
 - State
+- Project
 - AreaPath
 - IterationPath
 - AssignedTo
@@ -49,6 +50,7 @@ function Format-AzDOWorkItem {
             if ($Expand) {
                 $expandedProperties = @{
                     State         = $WorkItem.fields.'System.State'
+                    Project       = $WorkItem.fields.'System.TeamProject'
                     AreaPath      = $WorkItem.fields.'System.AreaPath'
                     IterationPath = $WorkItem.fields.'System.IterationPath'
                     AssignedTo    = $WorkItem.fields.'System.AssignedTo'
