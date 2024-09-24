@@ -7,8 +7,8 @@
     Context 'When getting builds in project: <_>' -ForEach (@('Tools'), @('MyProject', 'Tools')) {
         BeforeAll {
             $script:Project = $_
-            $testBuild = Get-BuildPipeline -Name 'PipelineTest-Short' -Project $script:Project |
-                Start-Build -Branch main
+            $testBuild = Get-AzDOPipeline -Name 'PipelineTest-Short' -Project $script:Project |
+                Start-AzDOPipelineRun -Branch main
             $script:user = $testBuild.requestedFor.uniqueName | Sort-Object -Unique
             $script:buildId = $testBuild.id
         }
@@ -73,7 +73,7 @@
     }
 
     It 'should take a build object from the pipeline' {
-        $inputBuild = Get-BuildPipeline -Name 'PipelineTest-Short' -Project Tools | Start-Build -Branch main
+        $inputBuild = Get-AzDOPipeline -Name 'PipelineTest-Short' -Project Tools | Start-AzDOPipelineRun -Branch main
         $pipelineBuild = $inputBuild | Get-AzDOPipelineRun
         Compare-Object -ReferenceObject $inputBuild -DifferenceObject $pipelineBuild | Should -BeNullOrEmpty
     }

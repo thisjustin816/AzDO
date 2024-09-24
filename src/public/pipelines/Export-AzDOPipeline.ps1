@@ -6,7 +6,7 @@ Exports a pipeline definition's json file.
 Exports a pipeline definition's json file.
 
 .PARAMETER PipelineDefinition
-A pipeline definition passed via the pipeline from Get-BuildPipeline.
+A pipeline definition passed via the pipeline from Get-AzDOPipeline.
 
 .PARAMETER Destination
 Destination folder of the json backup files.

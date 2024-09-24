@@ -6,7 +6,7 @@ Describe 'Integration Tests' {
 
     It 'should export a pipeline as json' {
         $name = 'PipelineTest'
-        Get-BuildPipeline -Name $name -Project Tools | Export-AzDOPipeline -Destination $TestDrive
+        Get-AzDOPipeline -Name $name -Project Tools | Export-AzDOPipeline -Destination $TestDrive
         Get-Content -Path "$TestDrive/$name.json" | ConvertFrom-Json | Should -Not -BeNullOrEmpty
     }
 }

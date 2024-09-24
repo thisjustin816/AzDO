@@ -1,7 +1,7 @@
 ﻿Describe 'Integration Tests' -Tag 'Integration' {
     BeforeAll {
-        Get-Module -Name PSAzDevOps -All | Remove-Module -Force -ErrorAction SilentlyContinue
-        Import-Module -Name "$PSScriptRoot/../../PSAzDevOps.psm1" -Force
+        Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
+        Import-Module -Name "$PSScriptRoot/../../AzDOCmd.psm1" -Force
     }
 
     It 'should be able to get a package' {
@@ -45,10 +45,10 @@
             -PackageName SetBuildAgents `
             -Version 0.1.10, 0.1.8 `
             -Feed ToolsFeed `
-            -Destination $TestDrive/PSAzDevOps
-        ( Get-ChildItem -Path $TestDrive/PSAzDevOps ).Name |
+            -Destination $TestDrive/AzDOCmd
+        ( Get-ChildItem -Path $TestDrive/AzDOCmd ).Name |
             Should -Contain 'SetBuildAgents.0.1.10'
-        ( Get-ChildItem -Path $TestDrive/PSAzDevOps ).Name |
+        ( Get-ChildItem -Path $TestDrive/AzDOCmd ).Name |
             Should -Contain 'SetBuildAgents.0.1.8'
     }
 }
