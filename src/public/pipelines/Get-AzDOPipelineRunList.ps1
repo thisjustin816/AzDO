@@ -6,7 +6,7 @@ Short description
 Long description
 
 .PARAMETER BuildPipeline
-A build pipeline object returned from Get-BuildPipeline.
+A build pipeline object returned from Get-AzDOPipeline.
 
 .PARAMETER Branch
 Only return builds from a given branch.
@@ -31,7 +31,7 @@ Personal access token authorized to administer builds. Defaults to $env:SYSTEM_A
 Pipelines.
 
 .EXAMPLE
-Get-BuildPipeline -Name utils-integration-checkin -Project MyProject | Get-AzDOPipelineRunList -MaxBuilds 3
+Get-AzDOPipeline -Name utils-integration-checkin -Project MyProject | Get-AzDOPipelineRunList -MaxBuilds 3
 
 .NOTES
 The Cmdlet will work as-is in a UI Pipeline with the default $Pat parameter as long as OAUTH access has been

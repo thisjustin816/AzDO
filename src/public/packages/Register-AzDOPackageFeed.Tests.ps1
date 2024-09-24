@@ -1,7 +1,7 @@
 ﻿Describe 'Integration Tests' -Tag 'Integration' {
     BeforeAll {
-        Get-Module -Name PSAzDevOps -All | Remove-Module -Force -ErrorAction SilentlyContinue
-        Import-Module -Name "$PSScriptRoot/../../PSAzDevOps.psm1" -Force
+        Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
+        Import-Module -Name "$PSScriptRoot/../../AzDOCmd.psm1" -Force
         Mock Set-EnvironmentVariable { }
     }
 

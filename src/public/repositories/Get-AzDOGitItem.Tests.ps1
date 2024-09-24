@@ -8,7 +8,7 @@
         Get-AzDOGitItem `
             -Path README.md `
             -Branch main `
-            -Repository AzDOCmd `
+            -AzDORepository AzDOCmd `
             -Project Tools |
             Should -Match '## AzDOCmd Cmdlets'
     }
@@ -17,7 +17,7 @@
         Get-AzDOGitItem `
             -Path README.md `
             -Branch main `
-            -Repository AzDOCmd `
+            -AzDORepository AzDOCmd `
             -Project Tools `
             -OutFile "$TestDrive/README.md"
         ( Get-Content -Path "$TestDrive/README.md" ) -join "`n" |
@@ -28,7 +28,7 @@
         Get-AzDOGitItem `
             -Path nuget.exe `
             -Branch main `
-            -Repository PipelineTasks `
+            -AzDORepository PipelineTasks `
             -Project Tools `
             -OutFile "$TestDrive/nuget.exe"
 
