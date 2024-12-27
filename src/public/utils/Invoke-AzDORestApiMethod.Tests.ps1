@@ -1,10 +1,10 @@
-﻿Describe 'Unit Tests' {
+﻿Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
         . $PSScriptRoot/Initialize-AzDORestApi.ps1
         . $PSScriptRoot/Invoke-AzDORestApiMethod.ps1
         $script:RestError = try {
             Invoke-RestMethod `
-                -Uri 'https://dev.azure.com/MyOrg/_apis/distributedtas/pools?api-version=5.1' `
+                -Uri 'https://dev.azure.com/MyOrg/_apis/distributedtask/pools?api-version=5.1' `
                 -Headers ( Initialize-AzDORestApi )
         }
         catch {
@@ -21,7 +21,18 @@
             Mock Invoke-RestMethod {
                 $script:MockCounter++
                 if ($script:MockCounter -lt 3) {
-                    throw $script:RestError
+                    class RestError : Exception {
+                        [System.Object]$Response
+                        RestError($Message) : base($Message) {
+                            $this.Response = [PSCustomObject]@{
+                                StatusCode        = [PSCustomObject]@{
+                                    value__ = 999
+                                }
+                                StatusDescription = $Message
+                            }
+                        }
+                    }
+                    throw [AzLoginException]::New('Test Error.')
                 }
                 else {
                     [PSCustomObject]@{
@@ -52,7 +63,18 @@
     Context 'use all retries' {
         BeforeAll {
             Mock Invoke-RestMethod {
-                throw $script:RestError
+                class RestError : Exception {
+                    [System.Object]$Response
+                    RestError($Message) : base($Message) {
+                        $this.Response = [PSCustomObject]@{
+                            StatusCode        = [PSCustomObject]@{
+                                value__ = 999
+                            }
+                            StatusDescription = $Message
+                        }
+                    }
+                }
+                throw [AzLoginException]::New('Test Error.')
             }
 
             Mock Start-Sleep
@@ -74,7 +96,18 @@
     Context 'use all retries' {
         BeforeAll {
             Mock Invoke-RestMethod {
-                throw $script:RestError
+                class RestError : Exception {
+                    [System.Object]$Response
+                    RestError($Message) : base($Message) {
+                        $this.Response = [PSCustomObject]@{
+                            StatusCode        = [PSCustomObject]@{
+                                value__ = 999
+                            }
+                            StatusDescription = $Message
+                        }
+                    }
+                }
+                throw [AzLoginException]::New('Test Error.')
             }
         }
 
@@ -92,7 +125,7 @@
     }
 }
 
-Describe 'Integration Tests' {
+Describe 'Integration Tests' -Tag 'Integration' {
     BeforeAll {
         . $PSScriptRoot/Initialize-AzDORestApi.ps1
         . $PSScriptRoot/Invoke-AzDORestApiMethod.ps1
@@ -122,8 +155,8 @@ Describe 'Integration Tests' {
     }
 
     It 'should add the subdomain to the default base URL: <CollectionUri>' -TestCases @(
-        @{ CollectionUri = 'https://dev.azure.com/nuvadev/' }
-        @{ CollectionUri = 'https://nuvadev.visualstudio.com/' }
+        @{ CollectionUri = 'https://dev.azure.com/myorg/' }
+        @{ CollectionUri = 'https://myorg.visualstudio.com/' }
     ) {
         param ($CollectionUri)
         (
