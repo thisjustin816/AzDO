@@ -122,8 +122,8 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     It 'should add the subdomain to the default base URL: <CollectionUri>' -TestCases @(
-        @{ CollectionUri = 'https://dev.azure.com/nuvadev/' }
-        @{ CollectionUri = 'https://nuvadev.visualstudio.com/' }
+        @{ CollectionUri = 'https://dev.azure.com/myorg/' }
+        @{ CollectionUri = 'https://myorg.visualstudio.com/' }
     ) {
         param ($CollectionUri)
         (
