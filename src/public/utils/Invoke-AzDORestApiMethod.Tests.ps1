@@ -21,7 +21,18 @@
             Mock Invoke-RestMethod {
                 $script:MockCounter++
                 if ($script:MockCounter -lt 3) {
-                    throw $script:RestError
+                    class RestError : Exception {
+                        [System.Object]$Response
+                        RestError($Message) : base($Message) {
+                            $this.Response = [PSCustomObject]@{
+                                StatusCode        = [PSCustomObject]@{
+                                    value__ = 999
+                                }
+                                StatusDescription = $Message
+                            }
+                        }
+                    }
+                    throw [AzLoginException]::New('Test Error.')
                 }
                 else {
                     [PSCustomObject]@{
@@ -52,7 +63,18 @@
     Context 'use all retries' {
         BeforeAll {
             Mock Invoke-RestMethod {
-                throw $script:RestError
+                class RestError : Exception {
+                    [System.Object]$Response
+                    RestError($Message) : base($Message) {
+                        $this.Response = [PSCustomObject]@{
+                            StatusCode        = [PSCustomObject]@{
+                                value__ = 999
+                            }
+                            StatusDescription = $Message
+                        }
+                    }
+                }
+                throw [AzLoginException]::New('Test Error.')
             }
 
             Mock Start-Sleep
@@ -74,7 +96,18 @@
     Context 'use all retries' {
         BeforeAll {
             Mock Invoke-RestMethod {
-                throw $script:RestError
+                class RestError : Exception {
+                    [System.Object]$Response
+                    RestError($Message) : base($Message) {
+                        $this.Response = [PSCustomObject]@{
+                            StatusCode        = [PSCustomObject]@{
+                                value__ = 999
+                            }
+                            StatusDescription = $Message
+                        }
+                    }
+                }
+                throw [AzLoginException]::New('Test Error.')
             }
         }
 
