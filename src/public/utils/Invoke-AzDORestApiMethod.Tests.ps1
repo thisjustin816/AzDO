@@ -1,10 +1,10 @@
-﻿Describe 'Unit Tests' {
+﻿Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
         . $PSScriptRoot/Initialize-AzDORestApi.ps1
         . $PSScriptRoot/Invoke-AzDORestApiMethod.ps1
         $script:RestError = try {
             Invoke-RestMethod `
-                -Uri 'https://dev.azure.com/MyOrg/_apis/distributedtas/pools?api-version=5.1' `
+                -Uri 'https://dev.azure.com/MyOrg/_apis/distributedtask/pools?api-version=5.1' `
                 -Headers ( Initialize-AzDORestApi )
         }
         catch {
@@ -92,7 +92,7 @@
     }
 }
 
-Describe 'Integration Tests' {
+Describe 'Integration Tests' -Tag 'Integration' {
     BeforeAll {
         . $PSScriptRoot/Initialize-AzDORestApi.ps1
         . $PSScriptRoot/Invoke-AzDORestApiMethod.ps1
