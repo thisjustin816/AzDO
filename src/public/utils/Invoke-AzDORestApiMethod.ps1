@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 A wrapper to invoke Azure DevOps API calls.
 
@@ -182,7 +182,19 @@ function Invoke-AzDORestApiMethod {
             try {
                 $response = $null
                 Write-Verbose -Message "$Method $restUri"
-                $restOutput = Invoke-RestMethod @restArgs
+                $restOutput = Invoke-RestMethod @restArgs -ResponseHeadersVariable 'responseHeaders'
+                if ($responseHeaders.'X-MS-ContinuationToken') {
+                    $fullRestOutput = $restOutput
+                    $continuationToken = $responseHeaders.'X-MS-ContinuationToken'
+                    while ($continuationToken) {
+                        $restArgs['Uri'] = $restUri + "&continuationToken=$continuationToken"
+                        $restOutput = Invoke-RestMethod @restArgs -ResponseHeadersVariable 'responseHeaders'
+                        $fullRestOutput.count += $restOutput.count
+                        $fullRestOutput.value += $restOutput.value
+                        $continuationToken = $responseHeaders.'X-MS-ContinuationToken'
+                    }
+                    $restOutput = $fullRestOutput
+                }
                 $ProgressPreference = $cachedProgressPreference
                 if ($restOutput.value) {
                     $restOutput.value
