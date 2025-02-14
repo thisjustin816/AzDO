@@ -3,7 +3,8 @@
 function Get-AzDODashboard {
     [CmdletBinding()]
     param (
-        [String]$Name,
+        [String[]]$Name,
+        [String[]]$Id,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
@@ -20,11 +21,32 @@ function Get-AzDODashboard {
 
     process {
         # GET https://dev.azure.com/{organization}/{project}/{team}/_apis/dashboard/dashboards?api-version=7.1-preview.3
-        Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Get `
-            -Project $Project `
-            -Endpoint "dashboard/dashboards" `
-            -NoRetry:$NoRetry
+        $ids = @()
+        $ids += if (-not $Id) {
+            $allDashboards = Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Get `
+                -Project $Project `
+                -Endpoint "dashboard/dashboards" `
+                -NoRetry:$NoRetry
+            if ($Name) {
+                $allDashboards | Where-Object -Property name -In $Name | Select-Object -ExpandProperty id
+            }
+            else {
+                $allDashboards.id
+            }
+        }
+        else {
+            $Id
+        }
+
+        foreach ($dashboardId in $ids) {
+            Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Get `
+                -Project $Project `
+                -Endpoint "dashboard/dashboards/$dashboardId" `
+                -NoRetry:$NoRetry
+        }
     }
 }
