@@ -71,12 +71,19 @@ function Get-AzDODashboard {
         }
 
         foreach ($dashboardId in $ids) {
-            Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                -Method Get `
-                -Project $Project `
-                -Endpoint "dashboard/dashboards/$dashboardId" `
-                -NoRetry:$NoRetry
+            try {
+                Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    -Method Get `
+                    -Project $Project `
+                    -Endpoint "dashboard/dashboards/$dashboardId" `
+                    -NoRetry:$NoRetry `
+                    -ErrorAction Stop
+            }
+            catch {
+                Write-Warning $_.Exception.Message
+                continue
+            }
         }
     }
 }
