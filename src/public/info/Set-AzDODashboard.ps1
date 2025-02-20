@@ -51,15 +51,15 @@ function Set-AzDODashboard {
 
     process {
         $endpoint = if ($Dashboard.id) {
-            Write-Host "Updating dashboard with ID: $($Dashboard.id) in project: $Project"
+            Write-Host "Updating the `"$($Dashboard.name)`" dashboard ($($Dashboard.id)) in project: $Project"
             "dashboard/dashboards/$($Dashboard.id)"
         }
         else {
-            Write-Host "Creating new dashboard in project: $Project"
+            Write-Host "Creating the `"$($Dashboard.name)`" dashboard in project: $Project"
             "dashboard/dashboards"
         }
 
-        if ($PSCmdlet.ShouldProcess("Dashboard $($Dashboard.id)", "Set")) {
+        if ($PSCmdlet.ShouldProcess("`"$($Dashboard.name)`" dashboard ($($Dashboard.id))", "Set")) {
             Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
                 -Method Post `
