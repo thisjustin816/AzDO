@@ -52,5 +52,8 @@ function Get-AzDOTeam {
         if ($Name) {
             $allTeams | Where-Object { $Name -contains $_.name }
         }
+        else {
+            $allTeams
+        }
     }
 }
