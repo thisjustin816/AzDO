@@ -11,6 +11,12 @@ A filter to search for dashboard names.
 .PARAMETER Id
 The dashboard ID to get.
 
+.PARAMETER Team
+The team project to get dashboards from.
+
+.PARAMETER NoRetry
+If specified, the command will not retry on failure.
+
 .PARAMETER Project
 Project that the dashboards reside in.
 
@@ -36,6 +42,7 @@ function Get-AzDODashboard {
     param (
         [String[]]$Name,
         [String[]]$Id,
+        [String]$Team,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
@@ -53,12 +60,18 @@ function Get-AzDODashboard {
     process {
         $ids = @()
         $ids += if (-not $Id) {
+            $dashboardParams = @{
+                Method   = 'Get'
+                Project  = $Project
+                Endpoint = 'dashboard/dashboards'
+                NoRetry  = $NoRetry
+            }
+            if ($Team) {
+                $dashboardParams['Team'] = $Team
+            }
             $allDashboards = Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
-                -Method Get `
-                -Project $Project `
-                -Endpoint 'dashboard/dashboards' `
-                -NoRetry:$NoRetry
+                @dashboardParams
             if ($Name) {
                 $allDashboards | Where-Object -Property name -In $Name | Select-Object -ExpandProperty id
             }
@@ -72,12 +85,18 @@ function Get-AzDODashboard {
 
         foreach ($dashboardId in $ids) {
             try {
+                $dashboardIdParams = @{
+                    Method   = 'Get'
+                    Project  = $Project
+                    Endpoint = "dashboard/dashboards/$dashboardId"
+                    NoRetry  = $NoRetry
+                }
+                if ($Team) {
+                    $dashboardIdParams['Team'] = $Team
+                }
                 Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
-                    -Method Get `
-                    -Project $Project `
-                    -Endpoint "dashboard/dashboards/$dashboardId" `
-                    -NoRetry:$NoRetry `
+                    @dashboardIdParams `
                     -ErrorAction Stop
             }
             catch {
