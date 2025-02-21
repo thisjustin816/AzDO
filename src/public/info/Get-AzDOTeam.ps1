@@ -45,6 +45,7 @@ function Get-AzDOTeam {
     process {
         $allTeams = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
+            -Method 'Get' `
             -Endpoint "projects/$$Project/teams" `
             -NoRetry:$NoRetry
 

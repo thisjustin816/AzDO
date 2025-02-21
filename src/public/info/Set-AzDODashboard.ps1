@@ -50,6 +50,9 @@ function Set-AzDODashboard {
     }
 
     process {
+        # if ($Dashboard.id) {
+        #     Get-AzDODashboard
+        # }
         $endpoint = if ($Dashboard.id) {
             Write-Host "Updating the `"$($Dashboard.name)`" dashboard ($($Dashboard.id)) in project: $Project"
             "dashboard/dashboards/$($Dashboard.id)"
