@@ -46,7 +46,7 @@ function Get-AzDOTeam {
         $allTeams = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method 'Get' `
-            -Endpoint "projects/$$Project/teams" `
+            -Endpoint "projects/$Project/teams" `
             -NoRetry:$NoRetry
 
         if ($Name) {
