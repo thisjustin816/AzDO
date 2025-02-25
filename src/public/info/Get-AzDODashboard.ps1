@@ -111,6 +111,7 @@ function Get-AzDODashboard {
                         -Pat $Pat
                     $dashboard['team'] = $teamObj
                 }
+                $dashboard
             }
             catch {
                 Write-Warning $_.Exception.Message
