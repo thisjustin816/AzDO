@@ -68,7 +68,20 @@ function Set-AzDODashboard {
                 -Endpoint $destinationEndpoint `
                 -NoRetry:$NoRetry `
                 -ErrorAction SilentlyContinue
+            if (-not $destinationDashboard) {
+                $destinationDashboard = Get-AzDODashboard `
+                @script:AzApiHeaders `
+                -Name $Dashboard.name `
+                -Project $Project `
+                -Team $Team `
+                -Endpoint $destinationEndpoint `
+                -NoRetry:$NoRetry `
+                -ErrorAction SilentlyContinue
+            }
             if ($destinationDashboard) {
+                if ($destinationDashboard.Count -gt 1) {
+                    Write-Warning "Multiple dashboards with the same name found. Nothing will be copied."
+                }
                 Write-Host "Updating the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
                 $endpoint = $destinationEndpoint
                 $method = 'Put'
