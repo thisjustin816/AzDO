@@ -73,10 +73,19 @@ function Get-AzDODashboard {
                 @script:AzApiHeaders `
                 @dashboardParams
             if ($Name) {
-                $allDashboards | Where-Object -Property name -In $Name | Select-Object -ExpandProperty id
+                $allDashboards |
+                    Where-Object -FilterScript { $Name -contains $_.name } |
+                    Select-Object -ExpandProperty id
             }
             else {
-                $allDashboards.id
+                if (-not $Team) {
+                    $allDashboards |
+                        Where-Object -Property dashboardScope -EQ 'project' |
+                        Select-Object -ExpandProperty id
+                }
+                else {
+                    $allDashboards.id
+                }
             }
         }
         else {
