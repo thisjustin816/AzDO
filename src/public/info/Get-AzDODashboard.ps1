@@ -109,7 +109,7 @@ function Get-AzDODashboard {
                         -NoRetry:$NoRetry `
                         -CollectionUri $CollectionUri `
                         -Pat $Pat
-                    $dashboard['team'] = $teamObj
+                    $dashboard | Add-Member -MemberType NoteProperty -Name Team -Value $teamObj
                 }
                 $dashboard
             }
