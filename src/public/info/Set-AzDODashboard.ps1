@@ -58,56 +58,21 @@ function Set-AzDODashboard {
 
     process {
         $dashboardDisplayName = if ($Team) { "$dashboardDisplayName" } else { $Dashboard.name }
-        if ($Dashboard.id) {
-            $destinationEndpoint = "dashboard/dashboards/$($Dashboard.id)"
-            $destinationDashboard = Get-AzDODashboard `
-                @script:AzApiHeaders `
-                -Id $Dashboard.id `
-                -Project $Project `
-                -Team $Team `
-                -Endpoint $destinationEndpoint `
-                -NoRetry:$NoRetry `
-                -ErrorAction SilentlyContinue
-            if (-not $destinationDashboard) {
-                $destinationDashboard = Get-AzDODashboard `
-                @script:AzApiHeaders `
-                -Name $Dashboard.name `
-                -Project $Project `
-                -Team $Team `
-                -Endpoint $destinationEndpoint `
-                -NoRetry:$NoRetry `
-                -ErrorAction SilentlyContinue
-            }
-            if ($destinationDashboard) {
-                if ($destinationDashboard.Count -gt 1) {
-                    Write-Warning "Multiple dashboards with the same name found. Nothing will be copied."
-                }
-                Write-Host "Updating the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
-                $endpoint = $destinationEndpoint
-                $method = 'Put'
-            }
-            else {
-                Write-Host "Creating the `"$dashboardDisplayName`" dashboard in project: $Project"
-                $endpoint = "dashboard/dashboards"
-                $method = 'Post'
-            }
-            
-        }
-        else {
-            Write-Host "Creating the `"$dashboardDisplayName`" dashboard in project: $Project"
-            $endpoint = "dashboard/dashboards"
-            $method = 'Post'
-        }
-
         if ($PSCmdlet.ShouldProcess("`"$dashboardDisplayName`" dashboard ($($Dashboard.id))", "Set")) {
+            Write-Host "Updating the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
+            $params = @{
+                Method   = 'Put'
+                Project  = $Project
+                Endpoint = "dashboard/dashboards/$($Dashboard.id)"
+                Body     = ( $Dashboard | ConvertTo-Json -Depth 10 )
+                NoRetry  = $NoRetry
+            }
+            if ($Team) {
+                $params['Team'] = $Team
+            }
             Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
-                -Method $method `
-                -Project $Project `
-                -Team $Team `
-                -Endpoint $endpoint `
-                -Body ( $Dashboard | ConvertTo-Json -Depth 10 ) `
-                -NoRetry:$NoRetry
+                @params
         }
     }
 }

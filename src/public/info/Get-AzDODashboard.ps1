@@ -43,6 +43,7 @@ function Get-AzDODashboard {
         [String[]]$Name,
         [String[]]$Id,
         [String]$Team,
+        [Switch]$IncludeTeam,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
@@ -102,7 +103,7 @@ function Get-AzDODashboard {
                     -Endpoint "dashboard/dashboards/$dashboardId" `
                     -NoRetry:$NoRetry `
                     -ErrorAction Stop
-                if ($Team) {
+                if ($IncludeTeam -and $Team) {
                     $teamObj = Get-AzDOTeam `
                         -Name $Team `
                         -Project $Project `
