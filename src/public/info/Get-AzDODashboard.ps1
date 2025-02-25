@@ -94,19 +94,22 @@ function Get-AzDODashboard {
 
         foreach ($dashboardId in $ids) {
             try {
-                $dashboardIdParams = @{
-                    Method   = 'Get'
-                    Project  = $Project
-                    Endpoint = "dashboard/dashboards/$dashboardId"
-                    NoRetry  = $NoRetry
-                }
-                if ($Team) {
-                    $dashboardIdParams['Team'] = $Team
-                }
-                Invoke-AzDORestApiMethod `
+                $dashboard = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
-                    @dashboardIdParams `
+                    -Method 'Get' `
+                    -Team $Team `
+                    -Project $Project `
+                    -Endpoint "dashboard/dashboards/$dashboardId" `
+                    -NoRetry:$NoRetry `
                     -ErrorAction Stop
+                if ($Team) {
+                    $teamObj = Get-AzDOTeam `
+                        @script:AzApiHeaders `
+                        -Name $Team `
+                        -Project $Project `
+                        -NoRetry:$NoRetry
+                    $dashboard['team'] = $teamObj
+                }
             }
             catch {
                 Write-Warning $_.Exception.Message
