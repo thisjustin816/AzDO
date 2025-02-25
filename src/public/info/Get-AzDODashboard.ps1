@@ -104,10 +104,11 @@ function Get-AzDODashboard {
                     -ErrorAction Stop
                 if ($Team) {
                     $teamObj = Get-AzDOTeam `
-                        @script:AzApiHeaders `
                         -Name $Team `
                         -Project $Project `
-                        -NoRetry:$NoRetry
+                        -NoRetry:$NoRetry `
+                        -CollectionUri $CollectionUri `
+                        -Pat $Pat
                     $dashboard['team'] = $teamObj
                 }
             }
