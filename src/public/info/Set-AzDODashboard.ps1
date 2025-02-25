@@ -11,6 +11,9 @@ The dashboard object to create or update.
 .PARAMETER Team
 The team project to create or update the dashboard in.
 
+.PARAMETER NoRetry
+If specified, the command will not retry on failure.
+
 .PARAMETER Project
 Project that the dashboard resides in.
 
@@ -38,8 +41,8 @@ function Set-AzDODashboard {
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [Object]$Dashboard,
-        [Switch]$NoRetry,
         [String]$Team,
+        [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
         [String]$Pat = $env:SYSTEM_ACCESSTOKEN
@@ -55,29 +58,43 @@ function Set-AzDODashboard {
 
     process {
         $dashboardDisplayName = if ($Team) { "$dashboardDisplayName" } else { $Dashboard.name }
-        $endpoint = if ($Dashboard.id) {
-            Write-Host "Updating the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
-            "dashboard/dashboards/$($Dashboard.id)"
+        if ($Dashboard.id) {
+            $destinationEndpoint = "dashboard/dashboards/$($Dashboard.id)"
+            $destinationDashboard = Get-AzDODashboard `
+                @script:AzApiHeaders `
+                -Id $Dashboard.id `
+                -Project $Project `
+                -Team $Team `
+                -Endpoint $destinationEndpoint `
+                -NoRetry:$NoRetry `
+                -ErrorAction SilentlyContinue
+            if ($destinationDashboard) {
+                Write-Host "Updating the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
+                $endpoint = $destinationEndpoint
+                $method = 'Put'
+            }
+            else {
+                Write-Host "Creating the `"$dashboardDisplayName`" dashboard in project: $Project"
+                $endpoint = "dashboard/dashboards"
+                $method = 'Post'
+            }
+            
         }
         else {
             Write-Host "Creating the `"$dashboardDisplayName`" dashboard in project: $Project"
-            "dashboard/dashboards"
+            $endpoint = "dashboard/dashboards"
+            $method = 'Post'
         }
 
         if ($PSCmdlet.ShouldProcess("`"$dashboardDisplayName`" dashboard ($($Dashboard.id))", "Set")) {
-            $params = @{
-                Method   = if ($Dashboard.id) { 'Put' } else { 'Post' }
-                Project  = $Project
-                Endpoint = $endpoint
-                Body     = ( $Dashboard | ConvertTo-Json -Depth 10 )
-                NoRetry  = $NoRetry
-            }
-            if ($Team) {
-                $params['Team'] = $Team
-            }
             Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
-                @params
+                -Method $method `
+                -Project $Project `
+                -Team $Team `
+                -Endpoint $endpoint `
+                -Body ( $Dashboard | ConvertTo-Json -Depth 10 ) `
+                -NoRetry:$NoRetry
         }
     }
 }
