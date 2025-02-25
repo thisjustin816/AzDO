@@ -40,7 +40,7 @@ function New-AzDODashboard {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [String]$Name,
-        [Object[]]$Widget,
+        [Object[]]$Widget = @{},
         [String]$Team,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
@@ -59,7 +59,7 @@ function New-AzDODashboard {
     process {
         $body = @{
             name    = $Name
-            widgets = $Widgets
+            widgets = $Widget
         } | ConvertTo-Json -Depth 10
         Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
