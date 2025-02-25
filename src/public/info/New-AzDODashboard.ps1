@@ -63,7 +63,7 @@ function New-AzDODashboard {
         } | ConvertTo-Json -Depth 10
         Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
-            -Method 'Put' `
+            -Method 'Post' `
             -Project $Project `
             -Team $Team `
             -Endpoint 'dashboard/dashboards' `
