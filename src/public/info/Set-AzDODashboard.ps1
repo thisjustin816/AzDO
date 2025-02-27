@@ -77,9 +77,20 @@ function Set-AzDODashboard {
             if ($Team) {
                 $params['Team'] = $Team
             }
-            Invoke-AzDORestApiMethod `
+            $updatedDashboard = Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
                 @params
+            if ($updatedDashboard) {
+                $dashboard
+            }
+            else {
+                Get-AzDODashboard `
+                    -Id $Dashboard.id `
+                    -Project $Project `
+                    -Team $Team `
+                    -CollectionUri $CollectionUri `
+                    -Pat $Pat
+            }
         }
     }
 }
