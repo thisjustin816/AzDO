@@ -81,7 +81,7 @@ function Set-AzDODashboard {
                 @script:AzApiHeaders `
                 @params
             if ($updatedDashboard) {
-                $dashboard
+                $updatedDashboard
             }
             else {
                 Get-AzDODashboard `
