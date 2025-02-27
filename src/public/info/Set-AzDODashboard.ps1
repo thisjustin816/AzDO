@@ -57,15 +57,22 @@ function Set-AzDODashboard {
     }
 
     process {
-        $dashboardDisplayName = if ($Team) { "$dashboardDisplayName" } else { $Dashboard.name }
-        if ($PSCmdlet.ShouldProcess("`"$dashboardDisplayName`" dashboard ($($Dashboard.id))", "Set")) {
+        $dashboardDisplayName = if ($Team) { "$Team/$($Dashboard.name)" } else { $Dashboard.name }
+        if ($PSCmdlet.ShouldProcess("`"$dashboardDisplayName`" dashboard ($($Dashboard.id))", 'Set')) {
             Write-Host "Updating the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
+            $method = 'Post'
+            $endpoint = 'dashboard/dashboards'
+            if ($Dashboard.id) {
+                $method = 'Put'
+                $endpoint += ('/' + $Dashboard.id)
+            }
             $params = @{
-                Method   = 'Put'
+                Method   = $method
                 Project  = $Project
-                Endpoint = "dashboard/dashboards/$($Dashboard.id)"
+                Endpoint = $endpoint
                 Body     = ( $Dashboard | ConvertTo-Json -Depth 10 )
                 NoRetry  = $NoRetry
+                Verbose  = $VerbosePreference
             }
             if ($Team) {
                 $params['Team'] = $Team
