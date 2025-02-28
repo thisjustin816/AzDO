@@ -69,7 +69,7 @@ function Set-AzDODashboardWidget {
                 Method   = 'Put'
                 Project  = $Project
                 Endpoint = $endpoint
-                Body     = ( @{ widgets = $Widgets } | ConvertTo-Json -Depth 10 )
+                Body     = ( $Widgets | ConvertTo-Json -Depth 10 )
                 NoRetry  = $NoRetry
                 Verbose  = $VerbosePreference
             }
