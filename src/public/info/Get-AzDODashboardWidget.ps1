@@ -50,7 +50,7 @@ function Get-AzDODashboardWidget {
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
-            ApiVersion    = '7.1-preview.3'
+            ApiVersion    = '7.1-preview.2'
         }
     }
 
