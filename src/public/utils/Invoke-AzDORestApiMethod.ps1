@@ -20,6 +20,9 @@ Subdomain prefix of dev.azure.com that the API requires.
 .PARAMETER Project
 The project the call will target. Can be automatically populated in a pipeline.
 
+.PARAMETER Team
+The team the call will target.
+
 .PARAMETER Endpoint
 Everything in between the base URI of the rest call and the parameters.
 e.g. VERB https://dev.azure.com/{organization}/{team-project}/_apis/{endpoint}?api-version={version}
@@ -71,6 +74,7 @@ function Invoke-AzDORestApiMethod {
         [string]$Organization,
         [string]$SubDomain,
         [string]$Project, # = $env:SYSTEM_TEAMPROJECT
+        [string]$Team,
         [Parameter(Mandatory = $true)]
         [string]$Endpoint,
         [string[]]$Params,
@@ -112,6 +116,10 @@ function Invoke-AzDORestApiMethod {
 
     if (![String]::isNullOrEmpty($Project)) {
         $restUri += [Uri]::EscapeDataString($Project) + '/'
+    }
+
+    if (![String]::isNullOrEmpty($Team)) {
+        $restUri += [Uri]::EscapeDataString($Team) + '/'
     }
 
     if ($Params.Length -eq 0) {
