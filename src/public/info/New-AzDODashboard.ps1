@@ -52,7 +52,7 @@ function New-AzDODashboard {
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
-            ApiVersion    = '7.1-preview.2'
+            ApiVersion    = '7.1-preview.3'
         }
     }
 
