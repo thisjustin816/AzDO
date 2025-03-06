@@ -62,23 +62,28 @@ function Set-AzDODashboardWidget {
 
     process {
         $dashboardDisplayName = if ($Team) { "$Team/$($Dashboard.name)" } else { $Dashboard.name }
-        if ($PSCmdlet.ShouldProcess("`"$dashboardDisplayName`" dashboard ($($Dashboard.id))", 'Set')) {
-            Write-Host "Replacing widgets in the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
+        if ($PSCmdlet.ShouldProcess("`"$dashboardDisplayName`" dashboard widgets", 'Set')) {
+            Write-Host (
+                "Replacing widgets in the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
+            )
             $endpoint = "dashboard/dashboards/$($Dashboard.id)/widgets"
-            $params = @{
-                Method   = 'Put'
-                Project  = $Project
-                Endpoint = $endpoint
-                Body     = ( $Widgets | ConvertTo-Json -Depth 10 )
-                NoRetry  = $NoRetry
-                Verbose  = $VerbosePreference
+            foreach ($widget in $Widgets) {
+                $method = if ($widget.id) { 'Put' } else { 'Post' }
+                $params = @{
+                    Method   = $method
+                    Project  = $Project
+                    Endpoint = $endpoint
+                    Body     = ( $widget | ConvertTo-Json -Depth 10 )
+                    NoRetry  = $NoRetry
+                    Verbose  = $VerbosePreference
+                }
+                if ($Team) {
+                    $params['Team'] = $Team
+                }
+                Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    @params
             }
-            if ($Team) {
-                $params['Team'] = $Team
-            }
-            Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                @params
         }
     }
 }
