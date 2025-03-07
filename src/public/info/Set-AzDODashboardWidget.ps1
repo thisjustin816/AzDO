@@ -66,9 +66,15 @@ function Set-AzDODashboardWidget {
             Write-Host (
                 "Replacing widgets in the `"$dashboardDisplayName`" dashboard ($($Dashboard.id)) in project: $Project"
             )
-            $endpoint = "dashboard/dashboards/$($Dashboard.id)/widgets"
             foreach ($widget in $Widgets) {
-                $method = if ($widget.id) { 'Put' } else { 'Post' }
+                if ($widget.id) {
+                    $method = 'Put'
+                    $endpoint = "dashboard/dashboards/$($Dashboard.id)/widgets/$($widget.id)"
+                }
+                else {
+                    $method = 'Post'
+                    $endpoint = "dashboard/dashboards/$($Dashboard.id)/widgets"
+                }
                 $params = @{
                     Method   = $method
                     Project  = $Project
