@@ -86,6 +86,7 @@ function Set-AzDODashboardWidget {
                 if ($Team) {
                     $params['Team'] = $Team
                 }
+                Write-Host "Updating the $($widget.name) widget..."
                 Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     @params
