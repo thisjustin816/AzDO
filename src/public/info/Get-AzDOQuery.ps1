@@ -8,6 +8,9 @@ This function retrieves queries from Azure DevOps using the REST API.
 .PARAMETER Id
 Specifies the ID of the query to retrieve. If not provided, all queries will be retrieved.
 
+.PARAMETER Path
+Specifies the path of the query to retrieve. If not provided, all queries will be retrieved.
+
 .PARAMETER Expand
 Specifies the expand parameter for the query. Default is 'All'.
 
@@ -30,7 +33,10 @@ The personal access token for Azure DevOps. Defaults to the environment variable
 Get-AzDOQuery -Project 'MyProject' -Pat 'myPatToken'
 
 .EXAMPLE
-Get-AzDOQuery -Project 'MyProject' -Pat 'myPatToken' -QueryId '12345'
+Get-AzDOQuery -Project 'MyProject' -Pat 'myPatToken' -Id '12345'
+
+.EXAMPLE
+Get-AzDOQuery -Project 'MyProject' -Pat 'myPatToken' -Path 'Shared Queries/MyQuery'
 
 .NOTES
 N/A
@@ -41,7 +47,10 @@ https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/queries/list
 function Get-AzDOQuery {
     [CmdletBinding()]
     param (
+        [Parameter(ParameterSetName = 'Id', Position = 0, Mandatory = $true)]
         [String]$Id,
+        [Parameter(ParameterSetName = 'Path', Position = 0, Mandatory = $true)]
+        [String]$Path,
         [String]$Expand = 'All',
         [Int]$Depth = 1,
         [Switch]$NoRetry,
@@ -60,8 +69,11 @@ function Get-AzDOQuery {
 
     process {
         $endpoint = 'wit/queries'
-        if ($QueryId) {
+        if ($Id) {
             $endpoint += "/$Id"
+        }
+        elseif ($Path) {
+            $endpoint += "/$Path"
         }
         Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
