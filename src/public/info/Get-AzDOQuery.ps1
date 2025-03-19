@@ -52,6 +52,7 @@ function Get-AzDOQuery {
         [Parameter(ParameterSetName = 'Path', Position = 0)]
         [String]$Path,
         [String]$Expand = 'All',
+        [ValidateRange(0, 2)]
         [Int]$Depth = 1,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
