@@ -97,6 +97,9 @@ function Set-AzDOQuery {
             $query['id'] = $Id
         }
         if ($Path) {
+            if (( $Path | Split-Path -Leaf ) -eq $Name ) {
+                $Path = $Path | Split-Path -Parent
+            }
             $query['path'] = $Path
         }
         $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
