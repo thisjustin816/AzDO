@@ -100,6 +100,10 @@ function Set-AzDOQuery {
             if (( $Path | Split-Path -Leaf ) -eq $Name ) {
                 $Path = $Path | Split-Path -Parent
             }
+            if ($Path -eq '' -and 'My Qureies', 'Shared Queries' -contains $Name) {
+                Write-Verbose 'Trying to create a root folder that already exists. Skipping...'
+                return
+            }
             $query['path'] = $Path
         }
         $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
