@@ -76,7 +76,7 @@ function Get-AzDOQuery {
         elseif ($Path) {
             $endpoint += "/$Path"
         }
-        Invoke-AzDORestApiMethod `
+        $query = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method 'Get' `
             -Project $Project `
@@ -86,5 +86,19 @@ function Get-AzDOQuery {
                 "`$depth=$Depth"
             ) `
             -NoRetry:$NoRetry
+        $query
+
+        if ($Depth -ge 1 -and $query.isFolder -and $query.hasChildren) {
+            $query.children | ForEach-Object {
+                Get-AzDOQuery `
+                    -Id $_.id `
+                    -Expand $Expand `
+                    -Depth $Depth `
+                    -NoRetry:$NoRetry `
+                    -Project $Project `
+                    -CollectionUri $CollectionUri `
+                    -Pat $Pat
+            }
+        }
     }
 }

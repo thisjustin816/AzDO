@@ -43,7 +43,7 @@ Set-AzDOQuery -Name "My Query" -Wiql "SELECT [System.Id] FROM WorkItems"
 N/A
 #>
 function Set-AzDOQuery {
-    [CmdletBinding(DefaultParameterSetName = 'Path')]
+    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'Path')]
     param (
         [Parameter(ParameterSetName = 'Id', Position = 0, Mandatory = $true)]
         [String]$Id,
@@ -51,15 +51,17 @@ function Set-AzDOQuery {
         [String]$Path,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Name,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'Folder', ValueFromPipelineByPropertyName = $true)]
+        [Bool]$IsFolder = $false,
+        [Parameter(ParameterSetName = 'Child', ValueFromPipelineByPropertyName = $true)]
         [String]$Wiql,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'Child', ValueFromPipelineByPropertyName = $true)]
         [Alias('queryType')]
         [ValidateSet('Flat', 'OneHop', 'Tree')]
         [String]$Type,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'Child', ValueFromPipelineByPropertyName = $true)]
         [Object]$Columns,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'Child', ValueFromPipelineByPropertyName = $true)]
         [Object]$SortColumns,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
@@ -76,12 +78,20 @@ function Set-AzDOQuery {
     }
 
     process {
-        $query = @{
-            name        = $Name
-            wiql        = $Wiql
-            queryType   = $Type.ToLower()
-            columns     = $Columns
-            sortColumns = $SortColumns
+        $query = if ($IsFolder) {
+            @{
+                name     = $Name
+                isFolder = $IsFolder
+            }
+        }
+        else {
+            @{
+                name        = $Name
+                wiql        = $Wiql
+                queryType   = $Type.ToLower()
+                columns     = $Columns
+                sortColumns = $SortColumns
+            }
         }
         if ($Id) {
             $query['id'] = $Id
@@ -98,7 +108,7 @@ function Set-AzDOQuery {
             Method   = $method
             Project  = $Project
             Endpoint = $endpoint
-            Body     = ( $query | ConvertTo-Json -Depth 10 )
+            Body     = $queryJson
             NoRetry  = $NoRetry
             Verbose  = $VerbosePreference
         }
