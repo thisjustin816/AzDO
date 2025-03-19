@@ -110,7 +110,7 @@ function Set-AzDOQuery {
             ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
 
         $method = if ($Id) { 'Put' } else { 'Post' }
-        $endpoint = if ($Id) { "wit/queries/$Project/$Id" } else { "wit/queries/$Project/$Path" }
+        $endpoint = if ($Id) { "wit/queries/$Id" } else { "wit/queries/$Path" }
         $params = @{
             Method   = $method
             Project  = $Project
