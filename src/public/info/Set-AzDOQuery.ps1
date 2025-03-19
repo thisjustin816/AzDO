@@ -121,7 +121,7 @@ function Set-AzDOQuery {
             }
             else {
                 Get-AzDOQuery `
-                    -Name $Name `
+                    -Id $Id `
                     -Project $Project `
                     -CollectionUri $CollectionUri `
                     -Pat $Pat
