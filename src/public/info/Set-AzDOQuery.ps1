@@ -43,32 +43,15 @@ Set-AzDOQuery -Name "My Query" -Wiql "SELECT [System.Id] FROM WorkItems"
 N/A
 #>
 function Set-AzDOQuery {
-    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'FolderByPath')]
+    [CmdletBinding(DefaultParameterSetName = 'Id')]
     param (
-        [Parameter(ParameterSetName = 'FolderById', Position = 0, Mandatory = $true)]
-        [Parameter(ParameterSetName = 'ChildById', Position = 0, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Id', Position = 0, Mandatory = $true)]
         [String]$Id,
-        [Parameter(ParameterSetName = 'FolderByPath', Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'Path', Position = 0, Mandatory = $true)]
         [String]$Path,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Name,
-        [Parameter(ParameterSetName = 'FolderByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'FolderByPath', ValueFromPipelineByPropertyName = $true)]
-        [Bool]$IsFolder = $false,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
         [String]$Wiql,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
-        [Alias('queryType')]
-        [ValidateSet('Flat', 'OneHop', 'Tree')]
-        [String]$Type,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
         [Object]$Columns,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
         [Object]$SortColumns,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
@@ -85,37 +68,26 @@ function Set-AzDOQuery {
     }
 
     process {
-        $query = if ($IsFolder) {
-            @{
-                name     = $Name
-                isFolder = $IsFolder
-            }
-        }
-        else {
-            @{
-                name        = $Name
-                wiql        = $Wiql
-                queryType   = $Type.ToLower()
-                columns     = $Columns
-                sortColumns = $SortColumns
-            }
+        $query = @{
+            name        = $Name
+            wiql        = $Wiql
+            columns     = $Columns
+            sortColumns = $SortColumns
         }
         if ($Id) {
-            $query['id'] = $Id
+            $query.id = $Id
         }
         if ($Path) {
-            $query['path'] = $Path
+            $query.path = $Path
         }
-        $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
-            ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
 
         $method = if ($Id) { 'Put' } else { 'Post' }
-        $endpoint = if ($Id) { "wit/queries/$Id" } else { "wit/queries/$Path" }
+        $endpoint = if ($Id) { "wit/queries/$Project/$Id" } else { "wit/queries/$Project/$Path" }
         $params = @{
             Method   = $method
             Project  = $Project
             Endpoint = $endpoint
-            Body     = $queryJson
+            Body     = ( $query | ConvertTo-Json -Depth 10 )
             NoRetry  = $NoRetry
             Verbose  = $VerbosePreference
         }
@@ -128,7 +100,7 @@ function Set-AzDOQuery {
             }
             else {
                 Get-AzDOQuery `
-                    -Id $Id `
+                    -Name $Name `
                     -Project $Project `
                     -CollectionUri $CollectionUri `
                     -Pat $Pat
