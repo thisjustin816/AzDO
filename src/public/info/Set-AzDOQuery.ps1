@@ -120,19 +120,9 @@ function Set-AzDOQuery {
             Verbose  = $VerbosePreference
         }
         if ($PSCmdlet.ShouldProcess($endpoint, 'Set')) {
-            $updatedQuery = Invoke-AzDORestApiMethod `
+            Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
                 @params
-            if ($updatedQuery) {
-                $updatedQuery
-            }
-            else {
-                Get-AzDOQuery `
-                    -Id $Id `
-                    -Project $Project `
-                    -CollectionUri $CollectionUri `
-                    -Pat $Pat
-            }
         }
     }
 }
