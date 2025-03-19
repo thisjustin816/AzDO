@@ -43,15 +43,23 @@ Set-AzDOQuery -Name "My Query" -Wiql "SELECT [System.Id] FROM WorkItems"
 N/A
 #>
 function Set-AzDOQuery {
-    [CmdletBinding(DefaultParameterSetName = 'Id')]
+    [CmdletBinding(DefaultParameterSetName = 'Path')]
     param (
         [Parameter(ParameterSetName = 'Id', Position = 0, Mandatory = $true)]
         [String]$Id,
-        [Parameter(ParameterSetName = 'Path', Position = 0, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Path', Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [String]$Path,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Name,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Wiql,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias('queryType')]
+        [ValidateSet('Flat', 'OneHop', 'Tree')]
+        [String]$Type,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Object]$Columns,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Object]$SortColumns,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
@@ -71,15 +79,18 @@ function Set-AzDOQuery {
         $query = @{
             name        = $Name
             wiql        = $Wiql
+            queryType   = $Type.ToLower()
             columns     = $Columns
             sortColumns = $SortColumns
         }
         if ($Id) {
-            $query.id = $Id
+            $query['id'] = $Id
         }
         if ($Path) {
-            $query.path = $Path
+            $query['path'] = $Path
         }
+        $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
+            ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
 
         $method = if ($Id) { 'Put' } else { 'Post' }
         $endpoint = if ($Id) { "wit/queries/$Project/$Id" } else { "wit/queries/$Project/$Path" }
