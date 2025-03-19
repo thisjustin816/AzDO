@@ -69,9 +69,9 @@ function Set-AzDOQuery {
 
     process {
         $query = @{
-            name = $Name
-            wiql = $Wiql
-            columns = $Columns
+            name        = $Name
+            wiql        = $Wiql
+            columns     = $Columns
             sortColumns = $SortColumns
         }
         if ($Id) {

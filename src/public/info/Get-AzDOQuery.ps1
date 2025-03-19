@@ -45,11 +45,11 @@ N/A
 https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/queries/list
 #>
 function Get-AzDOQuery {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Path')]
     param (
         [Parameter(ParameterSetName = 'Id', Position = 0, Mandatory = $true)]
         [String]$Id,
-        [Parameter(ParameterSetName = 'Path', Position = 0, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Path', Position = 0)]
         [String]$Path,
         [String]$Expand = 'All',
         [Int]$Depth = 1,
