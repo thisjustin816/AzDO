@@ -43,34 +43,25 @@ Set-AzDOQuery -Name "My Query" -Wiql "SELECT [System.Id] FROM WorkItems"
 N/A
 #>
 function Set-AzDOQuery {
-    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'FolderByPath')]
+    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'Path')]
     param (
-        [Parameter(ParameterSetName = 'FolderById', Position = 0, Mandatory = $true)]
-        [Parameter(ParameterSetName = 'ChildById', Position = 0, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Id', Position = 0, Mandatory = $true)]
         [String]$Id,
-        [Parameter(ParameterSetName = 'FolderByPath', Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'Path', Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [String]$Path,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Name,
-        [Parameter(ParameterSetName = 'FolderByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'FolderByPath', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Bool]$IsFolder = $false,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Wiql,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias('queryType')]
         [ValidateSet('Flat', 'OneHop', 'Tree')]
         [String]$Type,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Object]$Columns,
-        [Parameter(ParameterSetName = 'ChildByID', ValueFromPipelineByPropertyName = $true)]
-        [Parameter(ParameterSetName = 'ChildByPath', ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Object]$SortColumns,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
