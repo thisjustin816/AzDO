@@ -169,7 +169,7 @@ function Set-AzDOQuery {
                     }
                 }
                 else {
-                    Write-Error "Failed to set the query: $_"
+                    Write-Error "Failed to set the query: $newPath"
                     throw $_
                 }
             }
