@@ -120,9 +120,24 @@ function Set-AzDOQuery {
             Verbose  = $VerbosePreference
         }
         if ($PSCmdlet.ShouldProcess($endpoint, 'Set')) {
-            Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                @params
+            try {
+                Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    @params `
+                    -ErrorAction Stop
+            }
+            catch {
+                if ($_.Exception.Message -match 'has the same name as an item') {
+                    $params['Method'] = 'Patch'
+                    $params['Endpoint'] = "wit/queries/$Path/$Name"
+                    Invoke-AzDORestApiMethod `
+                        @script:AzApiHeaders `
+                        @params
+                }
+                else {
+                    throw $_
+                }
+            }
         }
     }
 }
