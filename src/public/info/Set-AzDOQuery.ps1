@@ -86,7 +86,7 @@ function Set-AzDOQuery {
         }
         else {
             @{
-                name        = $Name
+                name        = [System.Web.HttpUtility]::UrlEncode($Name)
                 wiql        = $Wiql
                 queryType   = $Type.ToLower()
                 columns     = $Columns
@@ -104,7 +104,7 @@ function Set-AzDOQuery {
                 Write-Verbose 'Trying to create a root folder that already exists. Skipping...'
                 return
             }
-            $query['path'] = $Path
+            $query['path'] = [System.Web.HttpUtility]::UrlEncode($Path)
         }
         $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
             ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
@@ -127,9 +127,10 @@ function Set-AzDOQuery {
             }
             catch {
                 if ($_.Exception.Message -match 'has the same name as an item') {
+                    $newPath = [System.Web.HttpUtility]::UrlEncode("$Path/$Name")
                     $params['Method'] = 'Patch'
-                    $params['Endpoint'] = "wit/queries/$Path/$Name"
-                    $query['Path'] = "$Path/$Name"
+                    $params['Endpoint'] = "wit/queries/$newPath"
+                    $query['Path'] = $newPath
                     $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
                         ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
                     Invoke-AzDORestApiMethod `
