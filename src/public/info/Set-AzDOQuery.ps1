@@ -142,16 +142,27 @@ function Set-AzDOQuery {
                     $query['Path'] = $newPath
                     $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
                         ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
-                    Invoke-AzDORestApiMethod `
-                        @script:AzApiHeaders `
-                        @params
-                    Get-AzDOQuery `
+                    $existingQuery = Get-AzDOQuery `
                         -Path $newPath `
                         -Depth 0 `
                         -Project $Project `
                         -CollectionUri $CollectionUri `
                         -Pat $Pat `
                         -NoRetry:$NoRetry
+                    if ($existingQuery) {
+                        try {
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                @params `
+                                -ErrorAction Stop
+                        }
+                        catch {
+                            if (-not $existingQuery.isFolder) {
+                                Write-Warning "The query $newPath already exists, but can't be updated. Skipping..."
+                            }
+                        }
+                        $existingQuery
+                    }
                 }
                 else {
                     throw $_
