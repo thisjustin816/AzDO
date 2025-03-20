@@ -66,6 +66,8 @@ function Get-AzDOQuery {
             CollectionUri = $CollectionUri
             ApiVersion    = '7.1'
         }
+
+        . "$PSScriptRoot/../../private/Export-EncodedUri.ps1"
     }
 
     process {
@@ -74,7 +76,7 @@ function Get-AzDOQuery {
             $endpoint += "/$Id"
         }
         elseif ($Path) {
-            $endpoint += "/$Path"
+            $endpoint += "/$( $Path | Export-EncodedUri)"
         }
         $query = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `

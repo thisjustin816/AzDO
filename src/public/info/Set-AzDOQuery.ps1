@@ -75,6 +75,8 @@ function Set-AzDOQuery {
             CollectionUri = $CollectionUri
             ApiVersion    = '7.1'
         }
+
+        . "$PSScriptRoot/../../private/Export-EncodedUri.ps1"
     }
 
     process {
@@ -115,7 +117,7 @@ function Set-AzDOQuery {
         }
         else {
             $method = 'Post'
-            $endpoint = "wit/queries/$([Uri]::EscapeDataString($Path))"
+            $endpoint = "wit/queries/$( $Path | Export-EncodedUri )"
         }
         $params = @{
             Method   = $method
@@ -136,7 +138,7 @@ function Set-AzDOQuery {
                 if ($_.Exception.Message -match 'has the same name as an item') {
                     $newPath = "$Path/$Name"
                     $params['Method'] = 'Patch'
-                    $params['Endpoint'] = "wit/queries/$([Uri]::EscapeDataString($newPath))"
+                    $params['Endpoint'] = "wit/queries/$( $newPath | Export-EncodedUri )"
                     $query['Path'] = $newPath
                     $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
                         ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
@@ -144,7 +146,7 @@ function Set-AzDOQuery {
                         @script:AzApiHeaders `
                         @params
                     Get-AzDOQuery `
-                        -Path ([Uri]::EscapeDataString($newPath)) `
+                        -Path $newPath `
                         -Depth 0 `
                         -Project $Project `
                         -CollectionUri $CollectionUri `
