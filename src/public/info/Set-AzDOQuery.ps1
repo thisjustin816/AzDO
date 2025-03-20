@@ -164,6 +164,9 @@ function Set-AzDOQuery {
                         }
                         $existingQuery
                     }
+                    else {
+                        Write-Warning "The query $newPath already exists, but can't be updated. Skipping..."
+                    }
                 }
                 else {
                     throw $_
