@@ -109,10 +109,9 @@ function Set-AzDOQuery {
         $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
             ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
 
-        $method = if ($Id) { 'Put' } else { 'Post' }
         $endpoint = if ($Id) { "wit/queries/$Id" } else { "wit/queries/$Path" }
         $params = @{
-            Method   = $method
+            Method   = 'Post'
             Project  = $Project
             Endpoint = $endpoint
             Body     = $queryJson
@@ -136,6 +135,12 @@ function Set-AzDOQuery {
                     Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `
                         @params
+                    Get-AzDOQuery `
+                        -Path $query['Path'] `
+                        -Depth 0 `
+                        -Project $Project `
+                        -CollectionUri $CollectionUri `
+                        -Pat $Pat
                 }
                 else {
                     throw $_
