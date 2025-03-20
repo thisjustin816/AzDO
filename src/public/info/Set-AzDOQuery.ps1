@@ -115,7 +115,7 @@ function Set-AzDOQuery {
         }
         else {
             $method = 'Post'
-            $endpoint = "wit/queries/$([System.Web.HttpUtility]::UrlEncode($Path))"
+            $endpoint = "wit/queries/$([Uri]::EscapeDataString($Path))"
         }
         $params = @{
             Method   = $method
@@ -136,7 +136,7 @@ function Set-AzDOQuery {
                 if ($_.Exception.Message -match 'has the same name as an item') {
                     $newPath = "$Path/$Name"
                     $params['Method'] = 'Patch'
-                    $params['Endpoint'] = "wit/queries/$([System.Web.HttpUtility]::UrlEncode($newPath))"
+                    $params['Endpoint'] = "wit/queries/$([Uri]::EscapeDataString($newPath))"
                     $query['Path'] = $newPath
                     $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
                         ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
@@ -144,7 +144,7 @@ function Set-AzDOQuery {
                         @script:AzApiHeaders `
                         @params
                     Get-AzDOQuery `
-                        -Path ([System.Web.HttpUtility]::UrlEncode($newPath)) `
+                        -Path ([Uri]::EscapeDataString($newPath)) `
                         -Depth 0 `
                         -Project $Project `
                         -CollectionUri $CollectionUri `
