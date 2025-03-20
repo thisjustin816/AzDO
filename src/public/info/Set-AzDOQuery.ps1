@@ -141,7 +141,8 @@ function Set-AzDOQuery {
                         -Depth 0 `
                         -Project $Project `
                         -CollectionUri $CollectionUri `
-                        -Pat $Pat
+                        -Pat $Pat `
+                        -NoRetry:$NoRetry
                 }
                 else {
                     throw $_
