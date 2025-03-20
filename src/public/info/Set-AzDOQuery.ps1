@@ -130,6 +130,9 @@ function Set-AzDOQuery {
                 if ($_.Exception.Message -match 'has the same name as an item') {
                     $params['Method'] = 'Patch'
                     $params['Endpoint'] = "wit/queries/$Path/$Name"
+                    $query['Path'] = "$Path/$Name"
+                    $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
+                        ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
                     Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `
                         @params
