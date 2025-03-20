@@ -86,7 +86,7 @@ function Set-AzDOQuery {
         }
         else {
             @{
-                name        = [System.Web.HttpUtility]::UrlEncode($Name)
+                name        = $Name
                 wiql        = $Wiql
                 queryType   = $Type.ToLower()
                 columns     = $Columns
@@ -104,14 +104,21 @@ function Set-AzDOQuery {
                 Write-Verbose 'Trying to create a root folder that already exists. Skipping...'
                 return
             }
-            $query['path'] = [System.Web.HttpUtility]::UrlEncode($Path)
+            $query['path'] = $Path
         }
         $queryJson = ( $query | ConvertTo-Json -Depth 10 ) -replace
             ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
 
-        $endpoint = if ($Id) { "wit/queries/$Id" } else { "wit/queries/$Path" }
+        if ($Id) {
+            $method = 'Patch'
+            $endpoint = "wit/queries/$Id"
+        }
+        else {
+            $method = 'Post'
+            $endpoint = "wit/queries/$([System.Web.HttpUtility]::UrlEncode($Path))"
+        }
         $params = @{
-            Method   = 'Post'
+            Method   = $method
             Project  = $Project
             Endpoint = $endpoint
             Body     = $queryJson
@@ -127,9 +134,9 @@ function Set-AzDOQuery {
             }
             catch {
                 if ($_.Exception.Message -match 'has the same name as an item') {
-                    $newPath = [System.Web.HttpUtility]::UrlEncode("$Path/$Name")
+                    $newPath = "$Path/$Name"
                     $params['Method'] = 'Patch'
-                    $params['Endpoint'] = "wit/queries/$newPath"
+                    $params['Endpoint'] = "wit/queries/$([System.Web.HttpUtility]::UrlEncode($newPath))"
                     $query['Path'] = $newPath
                     $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
                         ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
@@ -137,7 +144,7 @@ function Set-AzDOQuery {
                         @script:AzApiHeaders `
                         @params
                     Get-AzDOQuery `
-                        -Path $query['Path'] `
+                        -Path ([System.Web.HttpUtility]::UrlEncode($newPath)) `
                         -Depth 0 `
                         -Project $Project `
                         -CollectionUri $CollectionUri `
