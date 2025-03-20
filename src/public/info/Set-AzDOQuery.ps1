@@ -169,6 +169,7 @@ function Set-AzDOQuery {
                     }
                 }
                 else {
+                    Write-Error "Failed to set the query: $_"
                     throw $_
                 }
             }
