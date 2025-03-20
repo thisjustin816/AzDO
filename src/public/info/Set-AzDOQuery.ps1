@@ -148,7 +148,8 @@ function Set-AzDOQuery {
                         -Project $Project `
                         -CollectionUri $CollectionUri `
                         -Pat $Pat `
-                        -NoRetry:$NoRetry
+                        -NoRetry:$NoRetry `
+                        -ErrorAction SilentlyContinue
                     if ($existingQuery) {
                         try {
                             Invoke-AzDORestApiMethod `
