@@ -140,8 +140,7 @@ function Set-AzDOQuery {
                     $params['Method'] = 'Patch'
                     $params['Endpoint'] = "wit/queries/$( $newPath | Export-EncodedUri )"
                     $query['Path'] = $newPath
-                    $params['Body'] = ( $query | ConvertTo-Json -Depth 10 ) -replace
-                        ('(https:\/\/dev\.azure\.com\/[^\/]+\/[^\/]+)', $CollectionUri)
+                    $params['Body'] = ( $query | ConvertTo-Json -Depth 10 )
                     $existingQuery = Get-AzDOQuery `
                         -Path $newPath `
                         -Depth 0 `
