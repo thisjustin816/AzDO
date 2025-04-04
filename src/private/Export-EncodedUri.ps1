@@ -1,9 +1,9 @@
-<#
+﻿<#
 .SYNOPSIS
 Encodes a URI string to make it safe for use in API calls.
 
 .DESCRIPTION
-The `Export-EncodedUri` function takes a URI string as input and encodes it using the `System.Uri.EscapeDataString` method. 
+The `Export-EncodedUri` function takes a URI string as input and encodes it using the `System.Uri.EscapeDataString` method.
 This ensures that special characters in the URI are properly escaped, making the URI safe for use in web requests or API calls.
 
 .PARAMETER Uri
