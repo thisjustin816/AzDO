@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 A wrapper to invoke Azure DevOps API calls.
 
@@ -162,7 +162,7 @@ function Invoke-AzDORestApiMethod {
                 }
                 $restArgs['Body'] = [System.Text.Encoding]::UTF8.GetBytes($Body)
             }
-            Default {
+            default {
                 Write-Error -Message 'An unsupported rest method was attempted.'
             }
         }
