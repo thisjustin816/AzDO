@@ -60,26 +60,27 @@ function Get-AzDOWorkItem {
     }
 
     process {
-        $query = if ($Title) {
-            "SELECT [System.Id] FROM workitems WHERE [System.Title] CONTAINS '$Title'"
-        }
-        elseif ($Wiql) {
-            $Wiql
-        }
-
-        $Id = @(
-            Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                -Method Post `
-                -Project $Project `
-                -Endpoint 'wit/wiql' `
-                -Body @{ query = $query } | ConvertTo-Json -Compress `
-                -NoRetry:$NoRetry |
-                Select-Object -ExpandProperty workItems |
-                Select-Object -ExpandProperty id
-        )
-        if (!$Id) {
-            Write-Warning -Message "No work items found with query $query in project $Project."
+        if (-not $Id) {
+            $query = if ($Title) {
+                "SELECT [System.Id] FROM workitems WHERE [System.Title] CONTAINS '$Title'"
+            }
+            elseif ($Wiql) {
+                $Wiql
+            }
+            $Id = @(
+                Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    -Method Post `
+                    -Project $Project `
+                    -Endpoint 'wit/wiql' `
+                    -Body ( @{ query = $query } | ConvertTo-Json -Compress ) `
+                    -NoRetry:$NoRetry |
+                    Select-Object -ExpandProperty workItems |
+                    Select-Object -ExpandProperty id
+            )
+            if (-not $Id) {
+                Write-Warning -Message "No work items found with query $query in project $Project."
+            }
         }
 
         foreach ($item in $Id) {
@@ -89,8 +90,8 @@ function Get-AzDOWorkItem {
                 -Project $Project `
                 -Endpoint "wit/workitems/$item" `
                 -Params @(
-                    '$expand=All'
-                ) `
+                '$expand=All'
+            ) `
                 -NoRetry:$NoRetry
             $workItem | Add-Member `
                 -MemberType NoteProperty `
