@@ -11,6 +11,9 @@ ID of the work item.
 .PARAMETER Title
 Title of the work item.
 
+.PARAMETER Wiql
+A WIQL query to run to find work items.
+
 .PARAMETER Project
 Project that the work item is in.
 
@@ -39,6 +42,8 @@ function Get-AzDOWorkItem {
         [Int[]]$Id,
         [Parameter(ParameterSetName = 'Title', Mandatory = $true, Position = 0)]
         [String]$Title,
+        [Parameter(ParameterSetName = 'Wiql', Mandatory = $true, Position = 0)]
+        [String]$Wiql,
         [Switch]$NoRetry,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
@@ -55,25 +60,26 @@ function Get-AzDOWorkItem {
     }
 
     process {
-        if ($Title) {
-            $body = @{
-                query = "SELECT [System.Id] FROM workitems WHERE [System.Title] CONTAINS '$Title'"
-            } | ConvertTo-Json -Compress
+        $query = if ($Title) {
+            "SELECT [System.Id] FROM workitems WHERE [System.Title] CONTAINS '$Title'"
+        }
+        elseif ($Wiql) {
+            $Wiql
+        }
 
-            $Id = @(
-                Invoke-AzDORestApiMethod `
-                    @script:AzApiHeaders `
-                    -Method Post `
-                    -Project $Project `
-                    -Endpoint "wit/wiql" `
-                    -Body $body `
-                    -NoRetry:$NoRetry |
-                    Select-Object -ExpandProperty workItems |
-                    Select-Object -ExpandProperty id
-            )
-            if (!$Id) {
-                Write-Warning -Message "No work items found with title $Title in project $Project."
-            }
+        $Id = @(
+            Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Post `
+                -Project $Project `
+                -Endpoint 'wit/wiql' `
+                -Body @{ query = $query } | ConvertTo-Json -Compress `
+                -NoRetry:$NoRetry |
+                Select-Object -ExpandProperty workItems |
+                Select-Object -ExpandProperty id
+        )
+        if (!$Id) {
+            Write-Warning -Message "No work items found with query $query in project $Project."
         }
 
         foreach ($item in $Id) {
