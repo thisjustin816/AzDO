@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Imports a work item process definition from a JSON file.
 
@@ -44,37 +44,244 @@ function Import-AzDOWorkItemProcess {
     }
 
     process {
+        $progress = @{
+            Activity = "Importing process from '$Path'"
+        }
+
+        Write-Progress @progress -Status 'Reading process definition...'
         $processDefinition = Get-Content -Path $Path -Raw | ConvertFrom-Json -ErrorAction Stop
 
-        $existingProcess = Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Get `
-            -Endpoint "work/processes" `
-            -NoRetry:$NoRetry |
-            Where-Object { $_.name -eq $processDefinition.name }
+        # Validate required process fields
+        $requiredFields = ('name', 'typeId', 'workItemTypes')
 
-        if ($existingProcess) {
-            $shouldProcessMessage = "Process '$($processDefinition.name)' already exists. Would you like to update it?"
-            if ($Force -or $PSCmdlet.ShouldContinue($shouldProcessMessage, "Confirm process update")) {
-                if ($PSCmdlet.ShouldProcess($processDefinition.name, "Update process")) {
-                    Invoke-AzDORestApiMethod `
-                        @script:AzApiHeaders `
-                        -Method Put `
-                        -Endpoint "work/processes/$($existingProcess.typeId)" `
-                        -Body ($processDefinition | ConvertTo-Json -Depth 100 -Compress) `
-                        -NoRetry:$NoRetry
+        foreach ($field in $requiredFields) {
+            if (-not $processDefinition.$field) {
+                throw "Invalid process definition file. Missing required field '$field'."
+            }
+        }
+
+        # Validate work item types have required fields
+        if ($processDefinition.workItemTypes) {
+            foreach ($wit in $processDefinition.workItemTypes) {
+                if (-not $wit.referenceName) {
+                    throw "Invalid work item type definition. Missing required field 'referenceName'."
                 }
             }
         }
-        else {
-            if ($PSCmdlet.ShouldProcess($processDefinition.name, "Create process")) {
-                Invoke-AzDORestApiMethod `
+
+        Write-Progress @progress -Status 'Checking for existing process...'
+        $existingProcess = Invoke-AzDORestApiMethod `
+            @script:AzApiHeaders `
+            -Method Get `
+            -Endpoint 'work/processes' `
+            -NoRetry:$NoRetry |
+            Where-Object { $_.name -eq $processDefinition.name }
+
+        $result = $null
+        $restParams = @{
+            Body    = (
+                $processDefinition |
+                    Select-Object -Property name, description, parentProcessTypeId |
+                    ConvertTo-Json -Compress
+            )
+            NoRetry = $NoRetry
+        }
+
+        if ($existingProcess) {
+            $operation = "Update process '$($processDefinition.name)'"
+            if ($Force -or $PSCmdlet.ShouldProcess($processDefinition.name, $operation)) {
+                Write-Progress @progress -Status 'Updating process information...'
+                $result = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
-                    -Method Post `
-                    -Endpoint "work/processes" `
-                    -Body ($processDefinition | ConvertTo-Json -Depth 100 -Compress) `
-                    -NoRetry:$NoRetry
+                    @restParams `
+                    -Method Put `
+                    -Endpoint "work/processes/$($existingProcess.typeId)"
+                $processId = $existingProcess.typeId
             }
+        }
+        else {
+            if ($PSCmdlet.ShouldProcess($processDefinition.name, 'Create process')) {
+                Write-Progress @progress -Status 'Creating new process...'
+                $result = Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    @restParams `
+                    -Method Post `
+                    -Endpoint 'work/processes'
+                $processId = $result.typeId
+            }
+        }
+
+        if ($result) {
+            if ($processDefinition.fields) {
+                $fieldCount = $processDefinition.fields.Count
+                foreach ($field in $processDefinition.fields) {
+                    $fieldIndex = $processDefinition.fields.IndexOf($field) + 1
+                    $progress['Status'] = "Importing process fields ($fieldIndex of $fieldCount)..."
+                    $progress['CurrentOperation'] = $field.name
+                    $progress['PercentComplete'] = ($fieldIndex / $fieldCount) * 100
+                    Write-Progress @progress
+                    try {
+                        Invoke-AzDORestApiMethod `
+                            @script:AzApiHeaders `
+                            -Method Post `
+                            -Endpoint "work/processes/$processId/fields" `
+                            -Body ( $field | ConvertTo-Json -Compress ) `
+                            -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                    }
+                    catch {
+                        Write-Warning "Could not create field '$($field.name)'. It may already exist: $_"
+                    }
+                }
+            }
+
+            # Import process behaviors
+            if ($processDefinition.behaviors) {
+                $behaviorCount = $processDefinition.behaviors.Count
+                foreach ($behavior in $processDefinition.behaviors) {
+                    $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
+                    $progress['Status'] = "Importing process behaviors ($behaviorIndex of $behaviorCount)..."
+                    $progress['CurrentOperation'] = $behavior.name
+                    $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
+                    Write-Progress @progress
+                    try {
+                        Invoke-AzDORestApiMethod `
+                            @script:AzApiHeaders `
+                            -Method Post `
+                            -Endpoint "work/processes/$processId/behaviors" `
+                            -Body ( $behavior | ConvertTo-Json -Compress ) `
+                            -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                    }
+                    catch {
+                        Write-Warning "Could not create behavior '$($behavior.name)'. It may already exist: $_"
+                    }
+                }
+            }
+
+            # Import work item types and their components
+            if ($processDefinition.workItemTypes) {
+                $witTotal = $processDefinition.workItemTypes.Count
+                foreach ($wit in $processDefinition.workItemTypes) {
+                    $witName = $wit.referenceName
+                    $witIndex = $processDefinition.workItemTypes.IndexOf($wit) + 1
+                    $progress['Status'] = "Processing work item type: $witName ($witIndex of $witTotal)..."
+                    $progress['PercentComplete'] = ($witIndex / $witTotal) * 100
+                    Write-Progress @progress
+
+                    try {
+                        $witResult = if ($existingProcess) {
+                            $body = $wit |
+                                Select-Object -Property color, description, icon, isDisabled, name |
+                                ConvertTo-Json -Compress
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                -Method Put `
+                                -Endpoint "work/processes/$processId/workitemtypes/$witName" `
+                                -Body $body `
+                                -NoRetry:$NoRetry
+                        }
+                        else {
+                            $body = $wit |
+                                Select-Object -Property color, description, icon, isDisabled, name, referenceName |
+                                ConvertTo-Json -Compress
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                -Method Post `
+                                -Endpoint "work/processes/$processId/workitemtypes" `
+                                -Body $body `
+                                -NoRetry:$NoRetry
+                        }
+
+                        if ($wit.states) {
+                            Write-Progress @progress -CurrentOperation 'States'
+                            foreach ($state in $wit.states) {
+                                try {
+                                    Invoke-AzDORestApiMethod `
+                                        @script:AzApiHeaders `
+                                        -Method Post `
+                                        -Endpoint "work/processes/$processId/workitemtypes/$witName/states" `
+                                        -Body ( $state | ConvertTo-Json -Compress ) `
+                                        -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                                }
+                                catch {
+                                    Write-Warning "Could not create state '$($state.name)' for '$witName'. It may already exist: $_"
+                                }
+                            }
+                        }
+
+                        if ($wit.fields) {
+                            Write-Progress @progress -CurrentOperation 'Fields'
+                            foreach ($field in $wit.fields) {
+                                try {
+                                    Invoke-AzDORestApiMethod `
+                                        @script:AzApiHeaders `
+                                        -Method Post `
+                                        -Endpoint "work/processes/$processId/workitemtypes/$witName/fields" `
+                                        -Body ($field | ConvertTo-Json -Compress) `
+                                        -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                                }
+                                catch {
+                                    Write-Warning "Could not create field '$($field.name)' for '$witName'. It may already exist: $_"
+                                }
+                            }
+                        }
+
+                        if ($wit.rules) {
+                            Write-Progress @progress -CurrentOperation 'Rules'
+                            foreach ($rule in $wit.rules) {
+                                try {
+                                    Invoke-AzDORestApiMethod `
+                                        @script:AzApiHeaders `
+                                        -Method Post `
+                                        -Endpoint "work/processes/$processId/workitemtypes/$witName/rules" `
+                                        -Body ($rule | ConvertTo-Json -Compress) `
+                                        -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                                }
+                                catch {
+                                    Write-Warning "Could not create rule for '$witName'. It may already exist: $_"
+                                }
+                            }
+                        }
+
+                        if ($wit.behaviors) {
+                            Write-Progress @progress -CurrentOperation 'Behaviors'
+                            foreach ($behavior in $wit.behaviors) {
+                                try {
+                                    Invoke-AzDORestApiMethod `
+                                        @script:AzApiHeaders `
+                                        -Method Post `
+                                        -Endpoint "work/processes/$processId/workitemtypes/$witName/behaviors" `
+                                        -Body ($behavior | ConvertTo-Json -Compress) `
+                                        -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                                }
+                                catch {
+                                    Write-Warning "Could not create behavior for '$witName'. It may already exist: $_"
+                                }
+                            }
+                        }
+
+                        if ($wit.layout) {
+                            Write-Progress @progress -CurrentOperation 'Layout'
+                            try {
+                                Invoke-AzDORestApiMethod `
+                                    @script:AzApiHeaders `
+                                    -Method Put `
+                                    -Endpoint "work/processes/$processId/workitemtypes/$witName/layout" `
+                                    -Body ($wit.layout | ConvertTo-Json -Depth 100 -Compress) `
+                                    -NoRetry:$NoRetry
+                            }
+                            catch {
+                                Write-Warning "Could not update layout for '$witName': $_"
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Warning "Could not create/update work item type '$witName': $_"
+                    }
+                }
+            }
+
+            Write-Progress @progress -Completed
+            $result
         }
     }
 }
