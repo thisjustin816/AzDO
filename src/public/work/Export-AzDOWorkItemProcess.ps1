@@ -61,14 +61,14 @@ function Export-AzDOWorkItemProcess {
         $progress = @{
             Activity = "Exporting process '$ProcessName'"
         }
-        Write-Progress @progress -Status "Getting process definition..."
+        Write-Progress @progress -Status 'Getting process definition...'
         $processDefinition = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
             -Endpoint "work/processes/$($process.typeId)" `
             -NoRetry:$NoRetry
 
-        Write-Progress @progress -Status "Getting work item types..."
+        Write-Progress @progress -Status 'Getting work item types...'
         $workItemTypes = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
@@ -144,7 +144,7 @@ function Export-AzDOWorkItemProcess {
         $processFields = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
-            -Endpoint "_apis/wit/fields" `
+            -Endpoint 'wit/fields' `
             -NoRetry:$NoRetry `
             -ErrorAction Stop
 
