@@ -39,7 +39,7 @@ function Import-AzDOWorkItemProcess {
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
-            ApiVersion    = '7.1-preview.2'
+            ApiVersion    = '7.1'
         }
     }
 
