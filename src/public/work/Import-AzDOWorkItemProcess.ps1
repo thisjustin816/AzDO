@@ -124,7 +124,7 @@ function Import-AzDOWorkItemProcess {
                         Invoke-AzDORestApiMethod `
                             @script:AzApiHeaders `
                             -Method Post `
-                            -Endpoint "work/processes/$processId/fields" `
+                            -Endpoint "wit/fields" `
                             -Body ( $field | ConvertTo-Json -Compress ) `
                             -NoRetry:$NoRetry -ErrorAction SilentlyContinue
                     }
