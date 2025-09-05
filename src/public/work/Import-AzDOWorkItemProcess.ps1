@@ -23,6 +23,18 @@ Import-AzDOWorkItemProcess -Path "C:\Temp\Agile.json"
 
 .NOTES
 This function requires Process (manage) permissions in the organization.
+
+System fields (those with names starting with 'System.') are excluded from export
+and import as they are pre-defined in Azure DevOps. All other fields, including
+custom fields, will be processed.
+
+Custom fields will be namespaced with the process name:
+- Original field: MyField
+- Imported field: ProcessName.MyField
+
+This allows tracking which process created the field and enables safe overwrites
+when re-importing the same process. Use -Force to overwrite existing fields
+without confirmation.
 #>
 function Import-AzDOWorkItemProcess {
     [CmdletBinding(SupportsShouldProcess = $true)]
@@ -44,6 +56,9 @@ function Import-AzDOWorkItemProcess {
     }
 
     process {
+        $failedFields = @()
+        $importedFields = @()
+
         $progress = @{
             Activity = "Importing process from '$Path'"
         }
@@ -51,7 +66,6 @@ function Import-AzDOWorkItemProcess {
         Write-Progress @progress -Status 'Reading process definition...'
         $processDefinition = Get-Content -Path $Path -Raw | ConvertFrom-Json -ErrorAction Stop
 
-        # Validate required process fields
         $requiredFields = ('name', 'typeId', 'workItemTypes')
 
         foreach ($field in $requiredFields) {
@@ -60,7 +74,7 @@ function Import-AzDOWorkItemProcess {
             }
         }
 
-        # Validate work item types have required fields
+        # Ensure work item types have the minimum required properties for import
         if ($processDefinition.workItemTypes) {
             foreach ($wit in $processDefinition.workItemTypes) {
                 if (-not $wit.referenceName) {
@@ -112,6 +126,7 @@ function Import-AzDOWorkItemProcess {
         }
 
         if ($result) {
+            # Process-level fields must be created before work item types can reference them
             if ($processDefinition.fields) {
                 $fieldCount = $processDefinition.fields.Count
                 foreach ($field in $processDefinition.fields) {
@@ -120,21 +135,35 @@ function Import-AzDOWorkItemProcess {
                     $progress['CurrentOperation'] = $field.name
                     $progress['PercentComplete'] = ($fieldIndex / $fieldCount) * 100
                     Write-Progress @progress
+
                     try {
+                        $fieldToImport = $field.PSObject.Copy()
+                        if ($fieldToImport.referenceName -notlike "*$($processDefinition.name).*") {
+                            $fieldToImport.referenceName = "$($processDefinition.name).$($fieldToImport.referenceName)"
+                        }
+
                         Invoke-AzDORestApiMethod `
                             @script:AzApiHeaders `
                             -Method Post `
-                            -Endpoint "wit/fields" `
-                            -Body ( $field | ConvertTo-Json -Compress ) `
-                            -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                            -Endpoint 'wit/fields' `
+                            -Body ($fieldToImport | ConvertTo-Json -Compress) `
+                            -NoRetry:$NoRetry -ErrorAction Stop
+
+                        $importedFields += [PSCustomObject]@{
+                            Name          = $field.name
+                            ReferenceName = $fieldToImport.referenceName
+                            Type          = $field.type
+                            Action        = 'Created'
+                        }
                     }
                     catch {
-                        Write-Warning "Could not create field '$($field.name)'. It may already exist: $_"
+                        # Silently continue if field exists - common during re-imports
+                        Write-Verbose "Field $($fieldToImport.referenceName) may already exist: $_"
                     }
                 }
             }
 
-            # Import process behaviors
+            # Behaviors may be referenced by work item type configurations
             if ($processDefinition.behaviors) {
                 $behaviorCount = $processDefinition.behaviors.Count
                 foreach ($behavior in $processDefinition.behaviors) {
@@ -168,7 +197,7 @@ function Import-AzDOWorkItemProcess {
                     Write-Progress @progress
 
                     try {
-                        $witResult = if ($existingProcess) {
+                        if ($existingProcess) {
                             $body = $wit |
                                 Select-Object -Property color, description, icon, isDisabled, name |
                                 ConvertTo-Json -Compress
@@ -193,7 +222,7 @@ function Import-AzDOWorkItemProcess {
 
                         if ($wit.states) {
                             Write-Progress @progress -CurrentOperation 'States'
-                            # States must be created in order by their state category
+                            # Azure DevOps requires states to be created in workflow order
                             $orderedStates = $wit.states | Sort-Object -Property @{
                                 Expression = {
                                     switch ($_.stateCategory) {
@@ -216,7 +245,9 @@ function Import-AzDOWorkItemProcess {
                                         -NoRetry:$NoRetry -ErrorAction SilentlyContinue
                                 }
                                 catch {
-                                    Write-Warning "Could not create state '$($state.name)' for '$witName'. It may already exist: $_"
+                                    $msg = "Could not create state '$($state.name)' for '$witName'."
+                                    $msg += " It may already exist: $_"
+                                    Write-Warning $msg
                                 }
                             }
                         }
@@ -225,15 +256,59 @@ function Import-AzDOWorkItemProcess {
                             Write-Progress @progress -CurrentOperation 'Fields'
                             foreach ($field in $wit.fields) {
                                 try {
+                                    # Custom fields require organization-level creation before assignment
+                                    if ($field.referenceName -notlike 'System.*') {
+                                        $fieldToCreate = $field.PSObject.Copy()
+
+                                        # Namespace prevents conflicts with existing custom fields
+                                        $processPrefix = "$($processDefinition.name)."
+                                        if ($fieldToCreate.referenceName -notlike "*$processPrefix*") {
+                                            $newName = "$processPrefix$($fieldToCreate.referenceName)"
+                                            $fieldToCreate.referenceName = $newName
+                                        }
+
+                                        # These properties are determined by field usage, not definition
+                                        $createField = $fieldToCreate | Select-Object -Property * -ExcludeProperty `
+                                            isRequired, isLocked, isIdentity
+
+                                        try {
+                                            Invoke-AzDORestApiMethod `
+                                                @script:AzApiHeaders `
+                                                -Method Post `
+                                                -Endpoint 'wit/fields' `
+                                                -Body ($createField | ConvertTo-Json -Compress) `
+                                                -NoRetry:$NoRetry -ErrorAction Stop
+
+                                            $importedFields += [PSCustomObject]@{
+                                                Name          = $field.name
+                                                ReferenceName = $fieldToCreate.referenceName
+                                                Type          = $field.type
+                                                Action        = 'Created'
+                                            }
+                                        }
+                                        catch {
+                                            Write-Verbose "Field $($fieldToCreate.referenceName) may already exist: $_"
+                                        }
+
+                                        $field.referenceName = $fieldToCreate.referenceName
+                                    }
+
                                     Invoke-AzDORestApiMethod `
                                         @script:AzApiHeaders `
                                         -Method Post `
                                         -Endpoint "work/processes/$processId/workitemtypes/$witName/fields" `
                                         -Body ($field | ConvertTo-Json -Compress) `
-                                        -NoRetry:$NoRetry -ErrorAction SilentlyContinue
+                                        -NoRetry:$NoRetry -ErrorAction Stop
                                 }
                                 catch {
-                                    Write-Warning "Could not create field '$($field.name)' for '$witName'. It may already exist: $_"
+                                    $msg = "Could not add field '$($field.name)' to type '$witName': $_"
+                                    Write-Warning $msg
+                                    $failedFields += [PSCustomObject]@{
+                                        Name          = $field.name
+                                        ReferenceName = $field.referenceName
+                                        Type          = $field.type
+                                        Error         = $_.Exception.Message
+                                    }
                                 }
                             }
                         }
@@ -255,7 +330,7 @@ function Import-AzDOWorkItemProcess {
                             }
                         }
 
-                        # Only update layout for non-Test work item types as Test types are locked
+                        # Test work item types have locked layouts that cannot be modified
                         if ($wit.layout -and -not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
                             Write-Progress @progress -CurrentOperation 'Layout'
                             try {
@@ -278,6 +353,36 @@ function Import-AzDOWorkItemProcess {
             }
 
             Write-Progress @progress -Completed
+
+            Write-Host "`nImport Summary:" -ForegroundColor Cyan
+
+            if ($importedFields.Count -gt 0) {
+                Write-Host "`nSuccessfully imported fields:" -ForegroundColor Green
+                $importedFields | ForEach-Object {
+                    Write-Host "- $($_.Name) ($($_.ReferenceName)) - $($_.Action)"
+                }
+                Write-Host @"
+`nTo remove these fields if needed:
+1. Navigate to Organization Settings > Process > Fields
+2. Search for each field by its reference name
+3. Select the field and click Delete
+   Note: Fields that are in use cannot be deleted until all usages are removed
+"@ -ForegroundColor Yellow
+            }
+
+            if ($failedFields.Count -gt 0) {
+                Write-Warning @"
+`nThe following fields could not be imported and may need manual configuration:
+$($failedFields | ForEach-Object {
+    "- $($_.Name) ($($_.ReferenceName)): $($_.Error)"
+} | Out-String)
+To manually configure these fields:
+1. Navigate to Organization Settings > Process > Fields
+2. Verify if the fields already exist and check their configurations
+3. Create or update fields as needed
+"@
+            }
+
             $result
         }
     }

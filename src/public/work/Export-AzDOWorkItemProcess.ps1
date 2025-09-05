@@ -90,11 +90,33 @@ function Export-AzDOWorkItemProcess {
             $progress['PercentComplete'] = ($witIndex / $witTotal) * 100
             Write-Progress @progress -CurrentOperation 'Fields'
 
-            $witWithContent.fields = Invoke-AzDORestApiMethod `
+            $witFields = Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
                 -Method Get `
                 -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/fields" `
                 -NoRetry:$NoRetry
+
+            # Remove process namespaces to make exports portable between organizations
+            $witWithContent.fields = @(
+                foreach ($field in $witFields) {
+                    $fieldDef = $field | Select-Object -Property (
+                        'name',
+                        'referenceName',
+                        'isRequired',
+                        'isLocked',
+                        'isIdentity',
+                        'helpText',
+                        'defaultValue',
+                        'type'
+                    )
+
+                    if ($fieldDef.referenceName -notlike 'System.*' -and
+                        $fieldDef.referenceName -like "*$($processDefinition.name).*") {
+                        $fieldDef.referenceName = $fieldDef.referenceName -replace "^$($processDefinition.name)\."
+                    }
+                    $fieldDef
+                }
+            )
 
             Write-Progress @progress -CurrentOperation 'Rules'
             $witWithContent.rules = Invoke-AzDORestApiMethod `
@@ -110,7 +132,7 @@ function Export-AzDOWorkItemProcess {
                 -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/states" `
                 -NoRetry:$NoRetry
 
-            # Skip layout for Test work item types as they are locked
+            # Test work item types have locked layouts
             if (-not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
                 Write-Progress @progress -CurrentOperation 'Layout'
                 $witWithContent.layout = Invoke-AzDORestApiMethod `
@@ -141,12 +163,17 @@ function Export-AzDOWorkItemProcess {
 
         $progress['Status'] = 'Getting process fields...'
         Write-Progress @progress
+        # Only export custom fields specific to this process for portability
         $processFields = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
             -Endpoint 'wit/fields' `
             -NoRetry:$NoRetry `
-            -ErrorAction Stop
+            -ErrorAction Stop |
+            Where-Object {
+                $_.referenceName -notlike 'System.*' -and
+                $_.referenceName -like "*$($processDefinition.name).*"
+            }
 
         $processDefinition | Add-Member `
             -NotePropertyName fields `
