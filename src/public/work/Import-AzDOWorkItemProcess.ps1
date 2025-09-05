@@ -193,7 +193,20 @@ function Import-AzDOWorkItemProcess {
 
                         if ($wit.states) {
                             Write-Progress @progress -CurrentOperation 'States'
-                            foreach ($state in $wit.states) {
+                            # States must be created in order by their state category
+                            $orderedStates = $wit.states | Sort-Object -Property @{
+                                Expression = {
+                                    switch ($_.stateCategory) {
+                                        'Proposed' { 1 }
+                                        'InProgress' { 2 }
+                                        'Resolved' { 3 }
+                                        'Completed' { 4 }
+                                        'Removed' { 5 }
+                                        default { 99 }
+                                    }
+                                }
+                            }
+                            foreach ($state in $orderedStates) {
                                 try {
                                     Invoke-AzDORestApiMethod `
                                         @script:AzApiHeaders `
@@ -238,23 +251,6 @@ function Import-AzDOWorkItemProcess {
                                 }
                                 catch {
                                     Write-Warning "Could not create rule for '$witName'. It may already exist: $_"
-                                }
-                            }
-                        }
-
-                        if ($wit.behaviors) {
-                            Write-Progress @progress -CurrentOperation 'Behaviors'
-                            foreach ($behavior in $wit.behaviors) {
-                                try {
-                                    Invoke-AzDORestApiMethod `
-                                        @script:AzApiHeaders `
-                                        -Method Post `
-                                        -Endpoint "work/processes/$processId/workitemtypes/$witName/behaviors" `
-                                        -Body ($behavior | ConvertTo-Json -Compress) `
-                                        -NoRetry:$NoRetry -ErrorAction SilentlyContinue
-                                }
-                                catch {
-                                    Write-Warning "Could not create behavior for '$witName'. It may already exist: $_"
                                 }
                             }
                         }

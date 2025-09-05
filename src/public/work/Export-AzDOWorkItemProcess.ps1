@@ -82,7 +82,7 @@ function Export-AzDOWorkItemProcess {
             $witName = $wit.referenceName
 
             $witWithContent = $wit
-            foreach ($property in @('fields', 'rules', 'states', 'behaviors', 'layout')) {
+            foreach ($property in @('fields', 'rules', 'states', 'layout')) {
                 $witWithContent | Add-Member -NotePropertyName $property -NotePropertyValue $null
             }
 
@@ -108,13 +108,6 @@ function Export-AzDOWorkItemProcess {
                 @script:AzApiHeaders `
                 -Method Get `
                 -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/states" `
-                -NoRetry:$NoRetry
-
-            Write-Progress @progress -CurrentOperation 'Behaviors'
-            $witWithContent.behaviors = Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                -Method Get `
-                -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/behaviors" `
                 -NoRetry:$NoRetry
 
             Write-Progress @progress -CurrentOperation 'Layout'
