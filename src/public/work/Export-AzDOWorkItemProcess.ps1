@@ -120,7 +120,6 @@ function Export-AzDOWorkItemProcess {
                     -NoRetry:$NoRetry
             }
 
-            Write-Progress @progress -Completed
             $witWithContent
         }
 
@@ -145,13 +144,15 @@ function Export-AzDOWorkItemProcess {
         $processFields = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
-            -Endpoint "work/processes/$($process.typeId)/fields" `
-            -NoRetry:$NoRetry
+            -Endpoint '_apis/work/processes/fields' `
+            -NoRetry:$NoRetry `
+            -ErrorAction Stop
 
         $processDefinition | Add-Member `
             -NotePropertyName fields `
             -NotePropertyValue $processFields
 
+        $progress['Status'] = 'Finalizing export...'
         Write-Progress @progress -Completed
 
         $outFileName = ($ProcessName -replace '[^\w\-\.]', '_').ToLower() + '.json'
