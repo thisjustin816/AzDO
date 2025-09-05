@@ -255,7 +255,8 @@ function Import-AzDOWorkItemProcess {
                             }
                         }
 
-                        if ($wit.layout) {
+                        # Only update layout for non-Test work item types as Test types are locked
+                        if ($wit.layout -and -not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
                             Write-Progress @progress -CurrentOperation 'Layout'
                             try {
                                 Invoke-AzDORestApiMethod `

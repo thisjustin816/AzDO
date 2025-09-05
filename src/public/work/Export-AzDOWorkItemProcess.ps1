@@ -87,7 +87,7 @@ function Export-AzDOWorkItemProcess {
             }
 
             $progress['Status'] = "Processing work item type '$witName' ($witIndex of $witTotal)"
-            $progress['PercentComplete'] = ($witCurrent / $witTotal) * 100
+            $progress['PercentComplete'] = ($witIndex / $witTotal) * 100
             Write-Progress @progress -CurrentOperation 'Fields'
 
             $witWithContent.fields = Invoke-AzDORestApiMethod `
@@ -110,12 +110,15 @@ function Export-AzDOWorkItemProcess {
                 -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/states" `
                 -NoRetry:$NoRetry
 
-            Write-Progress @progress -CurrentOperation 'Layout'
-            $witWithContent.layout = Invoke-AzDORestApiMethod `
-                @script:AzApiHeaders `
-                -Method Get `
-                -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/layout" `
-                -NoRetry:$NoRetry
+            # Skip layout for Test work item types as they are locked
+            if (-not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
+                Write-Progress @progress -CurrentOperation 'Layout'
+                $witWithContent.layout = Invoke-AzDORestApiMethod `
+                    @script:AzApiHeaders `
+                    -Method Get `
+                    -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/layout" `
+                    -NoRetry:$NoRetry
+            }
 
             Write-Progress @progress -Completed
             $witWithContent
