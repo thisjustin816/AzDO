@@ -144,7 +144,7 @@ function Export-AzDOWorkItemProcess {
         $processFields = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
-            -Endpoint '_apis/work/processes/fields' `
+            -Endpoint "_apis/wit/fields" `
             -NoRetry:$NoRetry `
             -ErrorAction Stop
 
