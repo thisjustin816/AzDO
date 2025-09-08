@@ -224,7 +224,8 @@ function Import-AzDOWorkItemProcess {
                             -Method Post `
                             -Endpoint "work/processes/$processId/workitemtypes" `
                             -Body $body `
-                            -NoRetry:$NoRetry -ErrorAction Stop
+                            -NoRetry:$NoRetry `
+                            -ErrorAction Stop
                     }
                     catch {
                         # If creation fails (likely because it exists), try updating properties
