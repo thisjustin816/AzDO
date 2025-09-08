@@ -75,7 +75,6 @@ function Import-AzDOWorkItemProcess {
             }
         }
 
-        # Ensure work item types have the minimum required properties for import
         if ($processDefinition.workItemTypes) {
             foreach ($wit in $processDefinition.workItemTypes) {
                 if (-not $wit.referenceName) {
@@ -167,7 +166,6 @@ function Import-AzDOWorkItemProcess {
                         Write-Warning "Could not create/update field '$($fieldToImport.referenceName)': $_"
                     }
                     else {
-                        # Silently continue if field exists - common during re-imports
                         Write-Verbose "Field $($fieldToImport.referenceName) may already exist: $_"
                     }
                 }
@@ -193,7 +191,6 @@ function Import-AzDOWorkItemProcess {
                         -NoRetry:$NoRetry -ErrorAction $behaviorErrorAction
                 }
                 catch {
-                    # If creation fails (likely because it exists), try updating
                     if ($Force) {
                         try {
                             Invoke-AzDORestApiMethod `
@@ -214,7 +211,6 @@ function Import-AzDOWorkItemProcess {
             }
         }
 
-        # Import work item types and their components
         if ($processDefinition.workItemTypes) {
             $witTotal = $processDefinition.workItemTypes.Count
             foreach ($wit in $processDefinition.workItemTypes) {
@@ -224,209 +220,211 @@ function Import-AzDOWorkItemProcess {
                 $progress['PercentComplete'] = ($witIndex / $witTotal) * 100
                 Write-Progress @progress
 
-                try {
-                    $body = $wit |
-                        Select-Object -Property color, description, icon, isDisabled, name, referenceName |
-                        ConvertTo-Json -Compress
-
+                # Skip built-in work item types - they exist in all processes and cannot be created
+                if ($witName.StartsWith('System.')) {
+                    Write-Verbose "Skipping built-in work item type: $witName"
+                }
+                else {
                     try {
-                        Invoke-AzDORestApiMethod `
-                            @script:AzApiHeaders `
-                            -Method Post `
-                            -Endpoint "work/processes/$processId/workitemtypes" `
-                            -Body $body `
-                            -NoRetry:$NoRetry `
-                            -ErrorAction Stop
-                    }
-                    catch {
-                        # If creation fails (likely because it exists), try updating properties
-                        if ($Force) {
-                            try {
-                                $updateBody = $wit |
-                                    Select-Object -Property color, description, icon, isDisabled, name |
-                                    ConvertTo-Json -Compress
-                                Invoke-AzDORestApiMethod `
-                                    @script:AzApiHeaders `
-                                    -Method Put `
-                                    -Endpoint "work/processes/$processId/workitemtypes/$witName" `
-                                    -Body $updateBody `
-                                    -NoRetry:$NoRetry -ErrorAction Stop
-                            }
-                            catch {
-                                Write-Warning "Could not create or update work item type '$witName': $_"
-                            }
-                        }
-                        else {
-                            Write-Verbose "Work item type '$witName' may already exist: $_"
-                        }
-                    }
+                        $body = $wit |
+                            Select-Object -Property color, description, icon, isDisabled, name, referenceName |
+                            ConvertTo-Json -Compress
 
-                    if ($wit.states) {
-                        Write-Progress @progress -CurrentOperation 'States'
-                        # Azure DevOps requires states to be created in workflow order
-                        $orderedStates = $wit.states | Sort-Object -Property @{
-                            Expression = {
-                                switch ($_.stateCategory) {
-                                    'Proposed' { 1 }
-                                    'InProgress' { 2 }
-                                    'Resolved' { 3 }
-                                    'Completed' { 4 }
-                                    'Removed' { 5 }
-                                    default { 99 }
-                                }
-                            }
-                        }
-                        foreach ($state in $orderedStates) {
-                            try {
-                                $stateErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
-                                Invoke-AzDORestApiMethod `
-                                    @script:AzApiHeaders `
-                                    -Method Post `
-                                    -Endpoint "work/processes/$processId/workitemtypes/$witName/states" `
-                                    -Body ( $state | ConvertTo-Json -Compress ) `
-                                    -NoRetry:$NoRetry -ErrorAction $stateErrorAction
-                            }
-                            catch {
-                                $msg = "Could not create state '$($state.name)' for '$witName'."
-                                if ($Force) {
-                                    $msg += " Error: $_"
-                                    Write-Warning $msg
-                                }
-                                else {
-                                    $msg += " It may already exist: $_"
-                                    Write-Warning $msg
-                                }
-                            }
-                        }
-                    }
-
-                    if ($wit.fields) {
-                        Write-Progress @progress -CurrentOperation 'Fields'
-                        foreach ($field in $wit.fields) {
-                            try {
-                                # Custom fields require organization-level creation before assignment
-                                if ($field.referenceName -notlike 'System.*') {
-                                    $fieldToCreate = $field.PSObject.Copy()
-
-                                    # Namespace prevents conflicts with existing custom fields
-                                    $processPrefix = "$($processDefinition.name)."
-                                    if ($fieldToCreate.referenceName -notlike "*$processPrefix*") {
-                                        $newName = "$processPrefix$($fieldToCreate.referenceName)"
-                                        $fieldToCreate.referenceName = $newName
-                                    }
-
-                                    # These properties are determined by field usage, not definition
-                                    $createField = $fieldToCreate | Select-Object -Property * -ExcludeProperty `
-                                        isRequired, isLocked, isIdentity
-
-                                    try {
-                                        $witFieldErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
-                                        Invoke-AzDORestApiMethod `
-                                            @script:AzApiHeaders `
-                                            -Method Post `
-                                            -Endpoint 'wit/fields' `
-                                            -Body ($createField | ConvertTo-Json -Compress) `
-                                            -NoRetry:$NoRetry -ErrorAction $witFieldErrorAction
-
-                                        $importedFields += [PSCustomObject]@{
-                                            Name          = $field.name
-                                            ReferenceName = $fieldToCreate.referenceName
-                                            Type          = $field.type
-                                            Action        = if ($Force) { 'Created/Updated' } else { 'Created' }
-                                        }
-                                    }
-                                    catch {
-                                        if ($Force) {
-                                            Write-Warning (
-                                                "Field $($fieldToCreate.referenceName) could not be " +
-                                                "created/updated: $_"
-                                            )
-                                        }
-                                        else {
-                                            Write-Verbose (
-                                                "Field $($fieldToCreate.referenceName) may already " +
-                                                "exist: $_"
-                                            )
-                                        }
-                                    }
-
-                                    $field.referenceName = $fieldToCreate.referenceName
-                                }
-
-                                $fieldAssignErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
-                                Invoke-AzDORestApiMethod `
-                                    @script:AzApiHeaders `
-                                    -Method Post `
-                                    -Endpoint "work/processes/$processId/workitemtypes/$witName/fields" `
-                                    -Body ($field | ConvertTo-Json -Compress) `
-                                    -NoRetry:$NoRetry -ErrorAction $fieldAssignErrorAction
-                            }
-                            catch {
-                                if ($Force) {
-                                    Write-Warning "Could not add field '$($field.name)' to type '$witName': $_"
-                                    $failedFields += [PSCustomObject]@{
-                                        Name          = $field.name
-                                        ReferenceName = $field.referenceName
-                                        Type          = $field.type
-                                        Error         = $_.Exception.Message
-                                    }
-                                }
-                                else {
-                                    Write-Verbose "Field '$($field.name)' may already be assigned to '$witName': $_"
-                                }
-                            }
-                        }
-                    }
-
-                    if ($wit.rules) {
-                        Write-Progress @progress -CurrentOperation 'Rules'
-                        foreach ($rule in $wit.rules) {
-                            try {
-                                $ruleErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
-                                Invoke-AzDORestApiMethod `
-                                    @script:AzApiHeaders `
-                                    -Method Post `
-                                    -Endpoint "work/processes/$processId/workitemtypes/$witName/rules" `
-                                    -Body ($rule | ConvertTo-Json -Compress) `
-                                    -NoRetry:$NoRetry -ErrorAction $ruleErrorAction
-                            }
-                            catch {
-                                if ($Force) {
-                                    Write-Warning "Could not create/update rule for '$witName': $_"
-                                }
-                                else {
-                                    Write-Warning "Could not create rule for '$witName'. It may already exist: $_"
-                                }
-                            }
-                        }
-                    }
-
-                    # Test work item types have locked layouts that cannot be modified
-                    if ($wit.layout -and -not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
-                        Write-Progress @progress -CurrentOperation 'Layout'
                         try {
                             Invoke-AzDORestApiMethod `
                                 @script:AzApiHeaders `
-                                -Method Put `
-                                -Endpoint "work/processes/$processId/workitemtypes/$witName/layout" `
-                                -Body ($wit.layout | ConvertTo-Json -Depth 100 -Compress) `
-                                -NoRetry:$NoRetry
+                                -Method Post `
+                                -Endpoint "work/processes/$processId/workitemtypes" `
+                                -Body $body `
+                                -NoRetry:$NoRetry `
+                                -ErrorAction Stop
                         }
                         catch {
                             if ($Force) {
-                                Write-Warning "Could not update layout for '$witName': $_"
+                                try {
+                                    $updateBody = $wit |
+                                        Select-Object -Property color, description, icon, isDisabled, name |
+                                        ConvertTo-Json -Compress
+                                    Invoke-AzDORestApiMethod `
+                                        @script:AzApiHeaders `
+                                        -Method Put `
+                                        -Endpoint "work/processes/$processId/workitemtypes/$witName" `
+                                        -Body $updateBody `
+                                        -NoRetry:$NoRetry -ErrorAction Stop
+                                }
+                                catch {
+                                    Write-Warning "Could not create or update work item type '$witName': $_"
+                                }
                             }
                             else {
-                                Write-Verbose (
-                                    "Could not update layout for '$witName' " +
-                                    "(use -Force to see errors): $_"
-                                )
+                                Write-Verbose "Work item type '$witName' may already exist: $_"
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Warning "Could not create/update work item type '$witName': $_"
+                    }
+                }
+
+                if ($wit.states) {
+                    Write-Progress @progress -CurrentOperation 'States'
+                    # Azure DevOps requires states to be created in workflow order
+                    $orderedStates = $wit.states | Sort-Object -Property @{
+                        Expression = {
+                            switch ($_.stateCategory) {
+                                'Proposed' { 1 }
+                                'InProgress' { 2 }
+                                'Resolved' { 3 }
+                                'Completed' { 4 }
+                                'Removed' { 5 }
+                                default { 99 }
+                            }
+                        }
+                    }
+                    foreach ($state in $orderedStates) {
+                        try {
+                            $stateErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                -Method Post `
+                                -Endpoint "work/processes/$processId/workitemtypes/$witName/states" `
+                                -Body ( $state | ConvertTo-Json -Compress ) `
+                                -NoRetry:$NoRetry -ErrorAction $stateErrorAction
+                        }
+                        catch {
+                            $msg = "Could not create state '$($state.name)' for '$witName'."
+                            if ($Force) {
+                                $msg += " Error: $_"
+                                Write-Warning $msg
+                            }
+                            else {
+                                $msg += " It may already exist: $_"
+                                Write-Warning $msg
                             }
                         }
                     }
                 }
-                catch {
-                    Write-Warning "Could not create/update work item type '$witName': $_"
+
+                if ($wit.fields) {
+                    Write-Progress @progress -CurrentOperation 'Fields'
+                    foreach ($field in $wit.fields) {
+                        try {
+                            if ($field.referenceName -notlike 'System.*') {
+                                $fieldToCreate = $field.PSObject.Copy()
+
+                                $processPrefix = "$($processDefinition.name)."
+                                if ($fieldToCreate.referenceName -notlike "*$processPrefix*") {
+                                    $newName = "$processPrefix$($fieldToCreate.referenceName)"
+                                    $fieldToCreate.referenceName = $newName
+                                }
+
+                                $createField = $fieldToCreate | Select-Object -Property * -ExcludeProperty `
+                                    isRequired, isLocked, isIdentity
+
+                                try {
+                                    $witFieldErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
+                                    Invoke-AzDORestApiMethod `
+                                        @script:AzApiHeaders `
+                                        -Method Post `
+                                        -Endpoint 'wit/fields' `
+                                        -Body ($createField | ConvertTo-Json -Compress) `
+                                        -NoRetry:$NoRetry -ErrorAction $witFieldErrorAction
+
+                                    $importedFields += [PSCustomObject]@{
+                                        Name          = $field.name
+                                        ReferenceName = $fieldToCreate.referenceName
+                                        Type          = $field.type
+                                        Action        = if ($Force) { 'Created/Updated' } else { 'Created' }
+                                    }
+                                }
+                                catch {
+                                    if ($Force) {
+                                        Write-Warning (
+                                            "Field $($fieldToCreate.referenceName) could not be " +
+                                            "created/updated: $_"
+                                        )
+                                    }
+                                    else {
+                                        Write-Verbose (
+                                            "Field $($fieldToCreate.referenceName) may already " +
+                                            "exist: $_"
+                                        )
+                                    }
+                                }
+
+                                $field.referenceName = $fieldToCreate.referenceName
+                            }
+
+                            $fieldAssignErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                -Method Post `
+                                -Endpoint "work/processes/$processId/workitemtypes/$witName/fields" `
+                                -Body ($field | ConvertTo-Json -Compress) `
+                                -NoRetry:$NoRetry -ErrorAction $fieldAssignErrorAction
+                        }
+                        catch {
+                            if ($Force) {
+                                Write-Warning "Could not add field '$($field.name)' to type '$witName': $_"
+                                $failedFields += [PSCustomObject]@{
+                                    Name          = $field.name
+                                    ReferenceName = $field.referenceName
+                                    Type          = $field.type
+                                    Error         = $_.Exception.Message
+                                }
+                            }
+                            else {
+                                Write-Verbose "Field '$($field.name)' may already be assigned to '$witName': $_"
+                            }
+                        }
+                    }
+                }
+
+                if ($wit.rules) {
+                    Write-Progress @progress -CurrentOperation 'Rules'
+                    foreach ($rule in $wit.rules) {
+                        try {
+                            $ruleErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                -Method Post `
+                                -Endpoint "work/processes/$processId/workitemtypes/$witName/rules" `
+                                -Body ($rule | ConvertTo-Json -Compress) `
+                                -NoRetry:$NoRetry -ErrorAction $ruleErrorAction
+                        }
+                        catch {
+                            if ($Force) {
+                                Write-Warning "Could not create/update rule for '$witName': $_"
+                            }
+                            else {
+                                Write-Warning "Could not create rule for '$witName'. It may already exist: $_"
+                            }
+                        }
+                    }
+                }
+
+                # Test work item types have locked layouts that cannot be modified
+                if ($wit.layout -and -not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
+                    Write-Progress @progress -CurrentOperation 'Layout'
+                    try {
+                        Invoke-AzDORestApiMethod `
+                            @script:AzApiHeaders `
+                            -Method Put `
+                            -Endpoint "work/processes/$processId/workitemtypes/$witName/layout" `
+                            -Body ($wit.layout | ConvertTo-Json -Depth 100 -Compress) `
+                            -NoRetry:$NoRetry
+                    }
+                    catch {
+                        if ($Force) {
+                            Write-Warning "Could not update layout for '$witName': $_"
+                        }
+                        else {
+                            Write-Verbose (
+                                "Could not update layout for '$witName' " +
+                                "(use -Force to see errors): $_"
+                            )
+                        }
+                    }
                 }
             }
         }
