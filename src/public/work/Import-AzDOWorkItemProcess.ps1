@@ -214,27 +214,39 @@ function Import-AzDOWorkItemProcess {
                 Write-Progress @progress
 
                 try {
-                    if ($existingProcess) {
-                        $body = $wit |
-                            Select-Object -Property color, description, icon, isDisabled, name |
-                            ConvertTo-Json -Compress
-                        Invoke-AzDORestApiMethod `
-                            @script:AzApiHeaders `
-                            -Method Put `
-                            -Endpoint "work/processes/$processId/workitemtypes/$witName" `
-                            -Body $body `
-                            -NoRetry:$NoRetry
-                    }
-                    else {
-                        $body = $wit |
-                            Select-Object -Property color, description, icon, isDisabled, name, referenceName |
-                            ConvertTo-Json -Compress
+                    $body = $wit |
+                        Select-Object -Property color, description, icon, isDisabled, name, referenceName |
+                        ConvertTo-Json -Compress
+                    
+                    try {
                         Invoke-AzDORestApiMethod `
                             @script:AzApiHeaders `
                             -Method Post `
                             -Endpoint "work/processes/$processId/workitemtypes" `
                             -Body $body `
                             -NoRetry:$NoRetry
+                    }
+                    catch {
+                        # If creation fails (likely because it exists), try updating properties
+                        if ($Force) {
+                            try {
+                                $updateBody = $wit |
+                                    Select-Object -Property color, description, icon, isDisabled, name |
+                                    ConvertTo-Json -Compress
+                                Invoke-AzDORestApiMethod `
+                                    @script:AzApiHeaders `
+                                    -Method Put `
+                                    -Endpoint "work/processes/$processId/workitemtypes/$witName" `
+                                    -Body $updateBody `
+                                    -NoRetry:$NoRetry
+                            }
+                            catch {
+                                Write-Warning "Could not create or update work item type '$witName': $_"
+                            }
+                        }
+                        else {
+                            Write-Verbose "Work item type '$witName' may already exist: $_"
+                        }
                     }
 
                     if ($wit.states) {
