@@ -193,11 +193,22 @@ function Import-AzDOWorkItemProcess {
                         -NoRetry:$NoRetry -ErrorAction $behaviorErrorAction
                 }
                 catch {
+                    # If creation fails (likely because it exists), try updating
                     if ($Force) {
-                        Write-Warning "Could not create/update behavior '$($behavior.name)': $_"
+                        try {
+                            Invoke-AzDORestApiMethod `
+                                @script:AzApiHeaders `
+                                -Method Put `
+                                -Endpoint "work/processes/$processId/behaviors/$($behavior.referenceName)" `
+                                -Body ( $behavior | ConvertTo-Json -Compress ) `
+                                -NoRetry:$NoRetry -ErrorAction Stop
+                        }
+                        catch {
+                            Write-Warning "Could not create or update behavior '$($behavior.name)': $_"
+                        }
                     }
                     else {
-                        Write-Warning "Could not create behavior '$($behavior.name)'. It may already exist: $_"
+                        Write-Verbose "Behavior '$($behavior.name)' may already exist: $_"
                     }
                 }
             }
