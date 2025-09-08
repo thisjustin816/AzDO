@@ -217,14 +217,14 @@ function Import-AzDOWorkItemProcess {
                     $body = $wit |
                         Select-Object -Property color, description, icon, isDisabled, name, referenceName |
                         ConvertTo-Json -Compress
-                    
+
                     try {
                         Invoke-AzDORestApiMethod `
                             @script:AzApiHeaders `
                             -Method Post `
                             -Endpoint "work/processes/$processId/workitemtypes" `
                             -Body $body `
-                            -NoRetry:$NoRetry
+                            -NoRetry:$NoRetry -ErrorAction Stop
                     }
                     catch {
                         # If creation fails (likely because it exists), try updating properties
@@ -238,7 +238,7 @@ function Import-AzDOWorkItemProcess {
                                     -Method Put `
                                     -Endpoint "work/processes/$processId/workitemtypes/$witName" `
                                     -Body $updateBody `
-                                    -NoRetry:$NoRetry
+                                    -NoRetry:$NoRetry -ErrorAction Stop
                             }
                             catch {
                                 Write-Warning "Could not create or update work item type '$witName': $_"
