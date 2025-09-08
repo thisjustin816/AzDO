@@ -48,6 +48,9 @@ function Import-AzDOWorkItemProcess {
         [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
+    # Organization-specific properties to remove from behavior objects
+    $orgSpecificProps = @('inherits', 'url', '_links', 'id', 'customization', 'referenceName')
+
     begin {
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
@@ -174,38 +177,82 @@ function Import-AzDOWorkItemProcess {
 
         # Behaviors may be referenced by work item type configurations
         if ($processDefinition.behaviors) {
+            $failedBehaviors = @()
             $behaviorCount = $processDefinition.behaviors.Count
-            foreach ($behavior in $processDefinition.behaviors) {
+            $systemBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -like 'System.*' }
+            $customBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -notlike 'System.*' }
+            
+            # Process system behaviors first - these should already exist and just need assignment
+            foreach ($behavior in $systemBehaviors) {
                 $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
-                $progress['Status'] = "Importing process behaviors ($behaviorIndex of $behaviorCount)..."
+                $progress['Status'] = "Assigning system behavior ($behaviorIndex of $behaviorCount): $($behavior.name)"
                 $progress['CurrentOperation'] = $behavior.name
                 $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
                 Write-Progress @progress
+                
+                Write-Verbose "Skipping creation of system behavior '$($behavior.name)' - should already exist"
+            }
+            
+            # Process custom behaviors - clean org-specific properties
+            foreach ($behavior in $customBehaviors) {
+                $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
+                $progress['Status'] = "Importing custom behavior ($behaviorIndex of $behaviorCount): $($behavior.name)"
+                $progress['CurrentOperation'] = $behavior.name
+                $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
+                Write-Progress @progress
+                
                 try {
+                    # Remove org-specific properties that cause import failures
+                    $cleanBehavior = $behavior.PSObject.Copy()
+                    foreach ($prop in $orgSpecificProps) {
+                        if ($cleanBehavior.PSObject.Properties[$prop]) {
+                            $cleanBehavior.PSObject.Properties.Remove($prop)
+                            Write-Verbose "Removed org-specific property '$prop' from behavior '$($behavior.name)'"
+                        }
+                    }
+                    
                     $behaviorErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
                     Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `
                         -Method Post `
                         -Endpoint "work/processes/$processId/behaviors" `
-                        -Body ( $behavior | ConvertTo-Json -Compress ) `
+                        -Body ( $cleanBehavior | ConvertTo-Json -Compress ) `
                         -NoRetry:$NoRetry -ErrorAction $behaviorErrorAction
                 }
                 catch {
                     if ($Force) {
                         try {
+                            # Try updating existing behavior
+                            $cleanBehavior = $behavior.PSObject.Copy()
+                            foreach ($prop in $orgSpecificProps) {
+                                if ($cleanBehavior.PSObject.Properties[$prop]) {
+                                    $cleanBehavior.PSObject.Properties.Remove($prop)
+                                }
+                            }
+                            
                             Invoke-AzDORestApiMethod `
                                 @script:AzApiHeaders `
                                 -Method Put `
                                 -Endpoint "work/processes/$processId/behaviors/$($behavior.referenceName)" `
-                                -Body ( $behavior | ConvertTo-Json -Compress ) `
+                                -Body ( $cleanBehavior | ConvertTo-Json -Compress ) `
                                 -NoRetry:$NoRetry -ErrorAction Stop
                         }
                         catch {
-                            Write-Warning "Could not create or update behavior '$($behavior.name)': $_"
+                            Write-Warning "Could not import custom behavior '$($behavior.name)': $_"
+                            $failedBehaviors += [PSCustomObject]@{
+                                Name          = $behavior.name
+                                ReferenceName = $behavior.referenceName
+                                Error         = $_.Exception.Message
+                            }
                         }
                     }
                     else {
-                        Write-Verbose "Behavior '$($behavior.name)' may already exist: $_"
+                        Write-Verbose "Custom behavior '$($behavior.name)' could not be imported: $_"
+                        $failedBehaviors += [PSCustomObject]@{
+                            Name          = $behavior.name
+                            ReferenceName = $behavior.referenceName
+                            Error         = $_.Exception.Message
+                        }
                     }
                 }
             }
@@ -457,6 +504,25 @@ To manually configure these fields:
 1. Navigate to Organization Settings > Process > Fields
 2. Verify if the fields already exist and check their configurations
 3. Create or update fields as needed
+"@
+        }
+
+        if ($failedBehaviors.Count -gt 0) {
+            Write-Warning @"
+`nThe following behaviors could not be imported and may need manual configuration:
+$($failedBehaviors | ForEach-Object {
+    "- $($_.Name) ($($_.ReferenceName)): $($_.Error)"
+} | Out-String)
+Common causes and solutions:
+1. Organization-specific GUIDs or references in behavior definitions
+2. Dependencies on other behaviors not yet imported  
+3. Process template restrictions
+
+To manually configure these behaviors:
+1. Navigate to Organization Settings > Process > $($processDefinition.name) > Behaviors
+2. Create new behaviors with the names listed above
+3. Configure behavior properties based on the original process definition
+4. Re-run the import with -Force to continue with other components
 "@
         }
 
