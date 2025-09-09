@@ -181,7 +181,7 @@ function Import-AzDOWorkItemProcess {
             $behaviorCount = $processDefinition.behaviors.Count
             $systemBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -like 'System.*' }
             $customBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -notlike 'System.*' }
-            
+
             # Process system behaviors first - these should already exist and just need assignment
             foreach ($behavior in $systemBehaviors) {
                 $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
@@ -189,10 +189,10 @@ function Import-AzDOWorkItemProcess {
                 $progress['CurrentOperation'] = $behavior.name
                 $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
                 Write-Progress @progress
-                
+
                 Write-Verbose "Skipping creation of system behavior '$($behavior.name)' - should already exist"
             }
-            
+
             # Process custom behaviors - clean org-specific properties
             foreach ($behavior in $customBehaviors) {
                 $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
@@ -200,7 +200,7 @@ function Import-AzDOWorkItemProcess {
                 $progress['CurrentOperation'] = $behavior.name
                 $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
                 Write-Progress @progress
-                
+
                 try {
                     # Remove org-specific properties that cause import failures
                     $cleanBehavior = $behavior.PSObject.Copy()
@@ -210,7 +210,7 @@ function Import-AzDOWorkItemProcess {
                             Write-Verbose "Removed org-specific property '$prop' from behavior '$($behavior.name)'"
                         }
                     }
-                    
+
                     $behaviorErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
                     Invoke-AzDORestApiMethod `
                         @script:AzApiHeaders `
@@ -229,7 +229,7 @@ function Import-AzDOWorkItemProcess {
                                     $cleanBehavior.PSObject.Properties.Remove($prop)
                                 }
                             }
-                            
+
                             Invoke-AzDORestApiMethod `
                                 @script:AzApiHeaders `
                                 -Method Put `
@@ -515,7 +515,7 @@ $($failedBehaviors | ForEach-Object {
 } | Out-String)
 Common causes and solutions:
 1. Organization-specific GUIDs or references in behavior definitions
-2. Dependencies on other behaviors not yet imported  
+2. Dependencies on other behaviors not yet imported
 3. Process template restrictions
 
 To manually configure these behaviors:
