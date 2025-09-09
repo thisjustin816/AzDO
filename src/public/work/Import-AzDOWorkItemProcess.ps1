@@ -48,15 +48,15 @@ function Import-AzDOWorkItemProcess {
         [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
-    # Organization-specific properties to remove from behavior objects
-    $orgSpecificProps = @('inherits', 'url', '_links', 'id', 'customization', 'referenceName')
-
     begin {
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
             ApiVersion    = '7.1'
         }
+
+        # Organization-specific properties to remove from behavior objects
+        $script:OrgSpecificProps = @('inherits', 'url', '_links', 'id', 'customization', 'referenceName')
     }
 
     process {
@@ -204,7 +204,7 @@ function Import-AzDOWorkItemProcess {
                 try {
                     # Remove org-specific properties that cause import failures
                     $cleanBehavior = $behavior.PSObject.Copy()
-                    foreach ($prop in $orgSpecificProps) {
+                    foreach ($prop in $script:OrgSpecificProps) {
                         if ($cleanBehavior.PSObject.Properties[$prop]) {
                             $cleanBehavior.PSObject.Properties.Remove($prop)
                             Write-Verbose "Removed org-specific property '$prop' from behavior '$($behavior.name)'"
@@ -224,7 +224,7 @@ function Import-AzDOWorkItemProcess {
                         try {
                             # Try updating existing behavior
                             $cleanBehavior = $behavior.PSObject.Copy()
-                            foreach ($prop in $orgSpecificProps) {
+                            foreach ($prop in $script:OrgSpecificProps) {
                                 if ($cleanBehavior.PSObject.Properties[$prop]) {
                                     $cleanBehavior.PSObject.Properties.Remove($prop)
                                 }
