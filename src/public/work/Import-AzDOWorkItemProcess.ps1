@@ -178,6 +178,7 @@ function Import-AzDOWorkItemProcess {
         # Behaviors may be referenced by work item type configurations
         if ($processDefinition.behaviors) {
             $failedBehaviors = @()
+            $skippedBehaviors = @()
             $behaviorCount = $processDefinition.behaviors.Count
             $systemBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -like 'System.*' }
             $customBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -notlike 'System.*' }
@@ -200,6 +201,18 @@ function Import-AzDOWorkItemProcess {
                 $progress['CurrentOperation'] = $behavior.name
                 $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
                 Write-Progress @progress
+
+                # Skip organization-specific GUID behaviors
+                $guidPattern = '^Custom\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                if ($behavior.referenceName -match $guidPattern) {
+                    Write-Warning "Skipping org-specific behavior: $($behavior.name) ($($behavior.referenceName))"
+                    $skippedBehaviors += [PSCustomObject]@{
+                        Name          = $behavior.name
+                        ReferenceName = $behavior.referenceName
+                        Reason        = 'Organization-specific GUID'
+                    }
+                    continue
+                }
 
                 try {
                     # Remove org-specific properties that cause import failures
@@ -267,50 +280,51 @@ function Import-AzDOWorkItemProcess {
                 $progress['PercentComplete'] = ($witIndex / $witTotal) * 100
                 Write-Progress @progress
 
-                # Skip built-in work item types - they exist in all processes and cannot be created
-                if ($witName.StartsWith('System.')) {
-                    Write-Verbose "Skipping built-in work item type: $witName"
+                # Skip system work item types - cannot be imported
+                if ($witName.StartsWith('Microsoft.VSTS.WorkItemTypes.') -or $witName.StartsWith('System.')) {
+                    Write-Verbose "Skipping system work item type: $witName"
+                    continue
                 }
-                else {
-                    try {
-                        $body = $wit |
-                            Select-Object -Property color, description, icon, isDisabled, name, referenceName |
-                            ConvertTo-Json -Compress
 
-                        try {
-                            Invoke-AzDORestApiMethod `
-                                @script:AzApiHeaders `
-                                -Method Post `
-                                -Endpoint "work/processes/$processId/workitemtypes" `
-                                -Body $body `
-                                -NoRetry:$NoRetry `
-                                -ErrorAction Stop
-                        }
-                        catch {
-                            if ($Force) {
-                                try {
-                                    $updateBody = $wit |
-                                        Select-Object -Property color, description, icon, isDisabled, name |
-                                        ConvertTo-Json -Compress
-                                    Invoke-AzDORestApiMethod `
-                                        @script:AzApiHeaders `
-                                        -Method Put `
-                                        -Endpoint "work/processes/$processId/workitemtypes/$witName" `
-                                        -Body $updateBody `
-                                        -NoRetry:$NoRetry -ErrorAction Stop
-                                }
-                                catch {
-                                    Write-Warning "Could not create or update work item type '$witName': $_"
-                                }
-                            }
-                            else {
-                                Write-Verbose "Work item type '$witName' may already exist: $_"
-                            }
-                        }
+                # Create custom work item type
+                try {
+                    $body = $wit |
+                        Select-Object -Property color, description, icon, isDisabled, name, referenceName |
+                        ConvertTo-Json -Compress
+
+                    try {
+                        Invoke-AzDORestApiMethod `
+                            @script:AzApiHeaders `
+                            -Method Post `
+                            -Endpoint "work/processes/$processId/workitemtypes" `
+                            -Body $body `
+                            -NoRetry:$NoRetry `
+                            -ErrorAction Stop
                     }
                     catch {
-                        Write-Warning "Could not create/update work item type '$witName': $_"
+                        if ($Force) {
+                            try {
+                                $updateBody = $wit |
+                                    Select-Object -Property color, description, icon, isDisabled, name |
+                                    ConvertTo-Json -Compress
+                                Invoke-AzDORestApiMethod `
+                                    @script:AzApiHeaders `
+                                    -Method Put `
+                                    -Endpoint "work/processes/$processId/workitemtypes/$witName" `
+                                    -Body $updateBody `
+                                    -NoRetry:$NoRetry -ErrorAction Stop
+                            }
+                            catch {
+                                Write-Warning "Could not create or update work item type '$witName': $_"
+                            }
+                        }
+                        else {
+                            Write-Verbose "Work item type '$witName' may already exist: $_"
+                        }
                     }
+                }
+                catch {
+                    Write-Warning "Could not create/update work item type '$witName': $_"
                 }
 
                 if ($wit.states) {
@@ -524,6 +538,25 @@ To manually configure these behaviors:
 3. Configure behavior properties based on the original process definition
 4. Re-run the import with -Force to continue with other components
 "@
+        }
+
+        # Report skipped system types
+        $skippedTypes = $processDefinition.workItemTypes | Where-Object {
+            $_.referenceName.StartsWith('Microsoft.VSTS.WorkItemTypes.') -or $_.referenceName.StartsWith('System.')
+        }
+        if ($skippedTypes) {
+            Write-Host "`nSkipped system work item types (cannot be imported):" -ForegroundColor Yellow
+            $skippedTypes | ForEach-Object {
+                Write-Host "- $($_.name) ($($_.referenceName))"
+            }
+        }
+
+        # Report skipped behaviors
+        if ($skippedBehaviors -and $skippedBehaviors.Count -gt 0) {
+            Write-Host "`nSkipped organization-specific behaviors:" -ForegroundColor Yellow
+            $skippedBehaviors | ForEach-Object {
+                Write-Host "- $($_.Name) ($($_.ReferenceName)) - $($_.Reason)"
+            }
         }
 
         $result
