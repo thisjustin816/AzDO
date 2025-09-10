@@ -426,12 +426,25 @@ function Import-AzDOWorkItemProcess {
                         }
                         catch {
                             if ($Force) {
-                                Write-Warning "Could not add field '$($field.name)' to type '$witName': $_"
+                                $errorMessage = $_.Exception.Message
+                                $isFieldNotFound = $errorMessage -like "*TF400016*" -or
+                                                  $errorMessage -like "*field does not exist*"
+                                $isFieldNameConflict = $errorMessage -like "*TF400014*" -or
+                                                      $errorMessage -like "*name conflict*"
+                                $isSystemFieldRestriction = $errorMessage -like "*TF400013*" -or
+                                                           $errorMessage -like "*system field*"
+
+                                $category = if ($isFieldNotFound) { "Field Reference Not Found" }
+                                           elseif ($isFieldNameConflict) { "Field Name Conflict" }
+                                           elseif ($isSystemFieldRestriction) { "System Field Restriction" }
+                                           else { "Other Error" }
+
                                 $failedFields += [PSCustomObject]@{
                                     Name          = $field.name
                                     ReferenceName = $field.referenceName
                                     Type          = $field.type
-                                    Error         = $_.Exception.Message
+                                    Error         = $errorMessage
+                                    Category      = $category
                                 }
                             }
                             else {
@@ -509,16 +522,37 @@ function Import-AzDOWorkItemProcess {
         }
 
         if ($failedFields.Count -gt 0) {
-            Write-Warning @"
-`nThe following fields could not be imported and may need manual configuration:
-$($failedFields | ForEach-Object {
-    "- $($_.Name) ($($_.ReferenceName)): $($_.Error)"
-} | Out-String)
-To manually configure these fields:
+            # Group errors by category for organized reporting
+            $errorsByCategory = $failedFields | Group-Object -Property Category
+
+            Write-Warning "`nField import errors by category:"
+            foreach ($category in $errorsByCategory) {
+                $count = $category.Count
+                $categoryName = $category.Name
+                Write-Host "`n$categoryName ($count fields):" -ForegroundColor Red
+
+                $category.Group | ForEach-Object {
+                    Write-Host "  - $($_.Name) ($($_.ReferenceName))" -ForegroundColor Gray
+                }
+            }
+
+            Write-Host @"
+
+Field Error Resolution Guide:
+• Field Reference Not Found: Field may not exist in target organization
+  → Navigate to Organization Settings > Process > Fields to create missing fields
+• Field Name Conflict: Field with same name but different properties exists
+  → Check existing field configuration and resolve naming conflicts
+• System Field Restriction: Cannot modify system-defined fields
+  → System fields are managed by Azure DevOps and cannot be customized
+• Other Error: Various API or permission issues
+  → Check error details and ensure proper permissions
+
+To manually configure failed fields:
 1. Navigate to Organization Settings > Process > Fields
 2. Verify if the fields already exist and check their configurations
-3. Create or update fields as needed
-"@
+3. Create or update fields as needed matching the process requirements
+"@ -ForegroundColor Yellow
         }
 
         if ($failedBehaviors.Count -gt 0) {
