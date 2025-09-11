@@ -1,9 +1,9 @@
 ﻿Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
-        Import-Module (Join-Path $PSScriptRoot '..' 'AzDOCmd.psm1') -Force
+        Import-Module "$PSScriptRoot/../AzDOCmd.psm1" -Force
 
-        . (Join-Path $PSScriptRoot 'Import-AzDOProcessField.ps1')
+        . "$PSScriptRoot/Import-AzDOProcessField.ps1"
 
         Mock Invoke-AzDORestApiMethod {
             param($Uri, $Method, $Body, $Headers, $NoRetry)

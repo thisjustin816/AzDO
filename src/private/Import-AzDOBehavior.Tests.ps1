@@ -1,10 +1,10 @@
 ﻿Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
-        Import-Module (Join-Path $PSScriptRoot '..' 'AzDOCmd.psm1') -Force
+        Import-Module "$PSScriptRoot/../AzDOCmd.psm1" -Force
 
-        . (Join-Path $PSScriptRoot 'Clear-AzDOObjectOrgData.ps1')
-        . (Join-Path $PSScriptRoot 'Import-AzDOBehavior.ps1')
+        . "$PSScriptRoot/Clear-AzDOObjectOrgData.ps1"
+        . "$PSScriptRoot/Import-AzDOBehavior.ps1"
 
         Mock Clear-AzDOObjectOrgData {
             param($InputObject, $PropertiesToRemove)
