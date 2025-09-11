@@ -291,14 +291,17 @@ function Import-AzDOWorkItemProcess {
                             $errorMessage = $_.Exception.Message
                             $isStateNameConflict = $errorMessage -like "*VS403083*" -or
                                 $errorMessage -like "*state*already in use*"
-                            if ($AutoResolveConflicts -and $isStateNameConflict) {
-                                Write-Information "State '$($state.name)' already exists - using existing" `
+                            $isMethodNotAllowed = $errorMessage -like "*405*" -or
+                                $errorMessage -like "*Method Not Allowed*"
+                            
+                            if ($AutoResolveConflicts -and ($isStateNameConflict -or $isMethodNotAllowed)) {
+                                Write-Information "State '$($state.name)' already exists for '$witName' - using existing state" `
                                     -InformationAction Continue
                                 continue
                             }
-
+                            
                             $msg = "Could not create state '$($state.name)' for '$witName'."
-                            if ($Force) {
+                            if ($Force -or $AutoResolveConflicts) {
                                 $msg += " Error: $_"
                                 Write-Warning $msg
                             }
