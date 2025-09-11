@@ -1,9 +1,9 @@
 Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
-        Import-Module -Name "$PSScriptRoot\..\AzDOCmd.psm1" -Force
+        Import-Module -Name "$PSScriptRoot/../AzDOCmd.psm1" -Force
 
-        . "$PSScriptRoot\Get-AzDOApiProjectName.ps1"
+        . "$PSScriptRoot/Get-AzDOApiProjectName.ps1"
     }
 
     Context 'when processing string project names' {

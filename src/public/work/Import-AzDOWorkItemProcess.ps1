@@ -24,7 +24,7 @@ Automatically resolves naming conflicts: custom fields get ProcessName.FieldName
 standard Microsoft.VSTS.* fields map to existing, states map to existing, system fields skipped.
 
 .EXAMPLE
-Import-AzDOWorkItemProcess -Path "C:\Temp\Agile.json"
+Import-AzDOWorkItemProcess -Path "C:/Temp/Agile.json"
 
 .NOTES
 This function requires Process (manage) permissions in the organization.
@@ -54,9 +54,9 @@ function Import-AzDOWorkItemProcess {
     )
 
     begin {
-        . "$PSScriptRoot\..\..\private\Clear-AzDOObjectOrgData.ps1"
-        . "$PSScriptRoot\..\..\private\Import-AzDOProcessField.ps1"
-        . "$PSScriptRoot\..\..\private\Import-AzDOBehavior.ps1"
+        . "$PSScriptRoot/../../private/Clear-AzDOObjectOrgData.ps1"
+        . "$PSScriptRoot/../../private/Import-AzDOProcessField.ps1"
+        . "$PSScriptRoot/../../private/Import-AzDOBehavior.ps1"
 
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat

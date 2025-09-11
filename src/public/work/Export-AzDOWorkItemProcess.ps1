@@ -19,7 +19,7 @@ Personal access token with Process (read) permissions. Defaults to $env:SYSTEM_A
 The collection URI of the Azure DevOps organization. Defaults to $env:SYSTEM_COLLECTIONURI.
 
 .EXAMPLE
-Export-AzDOWorkItemProcess -ProcessName "Agile" -Destination "C:\Temp"
+Export-AzDOWorkItemProcess -ProcessName "Agile" -Destination "C:/Temp"
 
 .NOTES
 This function requires Process (read) permissions in the organization.
@@ -36,7 +36,7 @@ function Export-AzDOWorkItemProcess {
     )
 
     begin {
-        . "$PSScriptRoot\..\..\private\Clear-AzDOObjectOrgData.ps1"
+        . "$PSScriptRoot/../../private/Clear-AzDOObjectOrgData.ps1"
 
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
