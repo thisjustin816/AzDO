@@ -45,6 +45,7 @@ function Import-AzDOProcessField {
         [Parameter(Mandatory = $true)]
         [Hashtable]$ApiHeaders,
         [Switch]$Force,
+        [Switch]$AutoResolveConflicts,
         [Switch]$NoRetry
     )
 
@@ -71,6 +72,43 @@ function Import-AzDOProcessField {
         }
     }
     catch {
+        $errorMessage = $_.Exception.Message
+        if ($AutoResolveConflicts -and $errorMessage -like "*name*conflict*") {
+            $isStandardField = $Field.referenceName -like "Microsoft.VSTS.*" -or $Field.referenceName -like "System.*"
+            if ($isStandardField) {
+                Write-Information "Standard field '$($Field.name)' exists - using existing" -InformationAction Continue
+                return [PSCustomObject]@{
+                    Success       = $true
+                    Name          = $Field.name
+                    ReferenceName = $Field.referenceName
+                    Type          = $Field.type
+                    Action        = 'Used Existing Standard Field'
+                }
+            }
+
+            # Custom field - rename with process prefix
+            $processName = $ProcessName -replace '\s', ''
+            $fieldToImport.name = "$processName.$($Field.name)"
+            try {
+                Invoke-AzDORestApiMethod @ApiHeaders `
+                    -Method Post `
+                    -Endpoint 'wit/fields' `
+                    -Body ($fieldToImport | ConvertTo-Json -Compress) `
+                    -NoRetry:$NoRetry
+
+                return [PSCustomObject]@{
+                    Success       = $true
+                    Name          = $fieldToImport.name
+                    ReferenceName = $fieldToImport.referenceName
+                    Type          = $Field.type
+                    Action        = 'Created with Process Prefix'
+                }
+            }
+            catch {
+                Write-Warning "Auto-resolution failed for field '$($Field.name)': $_"
+            }
+        }
+
         if ($Force) {
             Write-Warning "Could not create/update field '$($fieldToImport.referenceName)': $_"
         }

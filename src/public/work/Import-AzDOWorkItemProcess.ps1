@@ -19,6 +19,10 @@ The collection URI of the Azure DevOps organization. Defaults to $env:SYSTEM_COL
 If specified, will overwrite existing process components (fields, behaviors, states, rules, layouts)
 without confirmation. Without this flag, existing components are skipped.
 
+.PARAMETER AutoResolveConflicts
+Automatically resolves naming conflicts: custom fields get ProcessName.FieldName prefix,
+standard Microsoft.VSTS.* fields map to existing, states map to existing, system fields skipped.
+
 .EXAMPLE
 Import-AzDOWorkItemProcess -Path "C:\Temp\Agile.json"
 
@@ -43,6 +47,7 @@ function Import-AzDOWorkItemProcess {
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [String]$Path,
         [Switch]$Force,
+        [Switch]$AutoResolveConflicts,
         [Switch]$NoRetry,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
         [String]$Pat = $env:SYSTEM_ACCESSTOKEN
@@ -147,6 +152,7 @@ function Import-AzDOWorkItemProcess {
                     -ProcessName $processDefinition.name `
                     -ApiHeaders $script:AzApiHeaders `
                     -Force:$Force `
+                    -AutoResolveConflicts:$AutoResolveConflicts `
                     -NoRetry:$NoRetry
 
                 if ($importResult.Success) {
@@ -282,6 +288,15 @@ function Import-AzDOWorkItemProcess {
                                 -NoRetry:$NoRetry -ErrorAction $stateErrorAction
                         }
                         catch {
+                            $errorMessage = $_.Exception.Message
+                            $isStateNameConflict = $errorMessage -like "*VS403083*" -or
+                                $errorMessage -like "*state*already in use*"
+                            if ($AutoResolveConflicts -and $isStateNameConflict) {
+                                Write-Information "State '$($state.name)' already exists - using existing" `
+                                    -InformationAction Continue
+                                continue
+                            }
+
                             $msg = "Could not create state '$($state.name)' for '$witName'."
                             if ($Force) {
                                 $msg += " Error: $_"
