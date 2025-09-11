@@ -49,6 +49,10 @@ function Import-AzDOWorkItemProcess {
     )
 
     begin {
+        . "$PSScriptRoot\..\..\private\Clear-AzDOObjectOrgData.ps1"
+        . "$PSScriptRoot\..\..\private\Import-AzDOProcessField.ps1"
+        . "$PSScriptRoot\..\..\private\Import-AzDOBehavior.ps1"
+
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
@@ -56,7 +60,7 @@ function Import-AzDOWorkItemProcess {
         }
 
         # Organization-specific properties to remove from behavior objects
-        $script:OrgSpecificProps = @('inherits', 'url', '_links', 'id', 'customization', 'referenceName')
+        $script:OrgSpecificProps = @('inherits', 'url', '_links', 'id', 'customization', 'referenceName', 'rank')
     }
 
     process {
@@ -138,39 +142,15 @@ function Import-AzDOWorkItemProcess {
                 $progress['PercentComplete'] = ($fieldIndex / $fieldCount) * 100
                 Write-Progress @progress
 
-                try {
-                    $fieldToImport = $field.PSObject.Copy()
-                    if ($fieldToImport.referenceName -notlike "*$($processDefinition.name).*") {
-                        $fieldToImport.referenceName = "$($processDefinition.name).$($fieldToImport.referenceName)"
-                    }
+                $importResult = Import-AzDOProcessField `
+                    -Field $field `
+                    -ProcessName $processDefinition.name `
+                    -ApiHeaders $script:AzApiHeaders `
+                    -Force:$Force `
+                    -NoRetry:$NoRetry
 
-                    $fieldErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
-                    Invoke-AzDORestApiMethod `
-                        @script:AzApiHeaders `
-                        -Method Post `
-                        -Endpoint 'wit/fields' `
-                        -Body ($fieldToImport | ConvertTo-Json -Compress) `
-                        -NoRetry:$NoRetry -ErrorAction $fieldErrorAction
-
-                    $importedFields += [PSCustomObject]@{
-                        Name          = $field.name
-                        ReferenceName = $fieldToImport.referenceName
-                        Type          = $field.type
-                        Action        = if ($Force) {
-                            'Created/Updated'
-                        }
-                        else {
-                            'Created'
-                        }
-                    }
-                }
-                catch {
-                    if ($Force) {
-                        Write-Warning "Could not create/update field '$($fieldToImport.referenceName)': $_"
-                    }
-                    else {
-                        Write-Verbose "Field $($fieldToImport.referenceName) may already exist: $_"
-                    }
+                if ($importResult.Success) {
+                    $importedFields += $importResult
                 }
             }
         }
@@ -194,7 +174,7 @@ function Import-AzDOWorkItemProcess {
                 Write-Verbose "Skipping creation of system behavior '$($behavior.name)' - should already exist"
             }
 
-            # Process custom behaviors - clean org-specific properties
+            # Process custom behaviors
             foreach ($behavior in $customBehaviors) {
                 $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
                 $progress['Status'] = "Importing custom behavior ($behaviorIndex of $behaviorCount): $($behavior.name)"
@@ -202,71 +182,19 @@ function Import-AzDOWorkItemProcess {
                 $progress['PercentComplete'] = ($behaviorIndex / $behaviorCount) * 100
                 Write-Progress @progress
 
-                # Skip organization-specific GUID behaviors
-                $guidPattern = '^Custom\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                if ($behavior.referenceName -match $guidPattern) {
-                    Write-Warning "Skipping org-specific behavior: $($behavior.name) ($($behavior.referenceName))"
-                    $skippedBehaviors += [PSCustomObject]@{
-                        Name          = $behavior.name
-                        ReferenceName = $behavior.referenceName
-                        Reason        = 'Organization-specific GUID'
-                    }
-                    continue
+                $importResult = Import-AzDOBehavior `
+                    -Behavior $behavior `
+                    -ProcessId $processId `
+                    -ApiHeaders $script:AzApiHeaders `
+                    -PropertiesToRemove $script:OrgSpecificProps `
+                    -Force:$Force `
+                    -NoRetry:$NoRetry
+
+                if (-not $importResult.Success) {
+                    $failedBehaviors += $importResult
                 }
-
-                try {
-                    # Remove org-specific properties that cause import failures
-                    $cleanBehavior = $behavior.PSObject.Copy()
-                    foreach ($prop in $script:OrgSpecificProps) {
-                        if ($cleanBehavior.PSObject.Properties[$prop]) {
-                            $cleanBehavior.PSObject.Properties.Remove($prop)
-                            Write-Verbose "Removed org-specific property '$prop' from behavior '$($behavior.name)'"
-                        }
-                    }
-
-                    $behaviorErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
-                    Invoke-AzDORestApiMethod `
-                        @script:AzApiHeaders `
-                        -Method Post `
-                        -Endpoint "work/processes/$processId/behaviors" `
-                        -Body ( $cleanBehavior | ConvertTo-Json -Compress ) `
-                        -NoRetry:$NoRetry -ErrorAction $behaviorErrorAction
-                }
-                catch {
-                    if ($Force) {
-                        try {
-                            # Try updating existing behavior
-                            $cleanBehavior = $behavior.PSObject.Copy()
-                            foreach ($prop in $script:OrgSpecificProps) {
-                                if ($cleanBehavior.PSObject.Properties[$prop]) {
-                                    $cleanBehavior.PSObject.Properties.Remove($prop)
-                                }
-                            }
-
-                            Invoke-AzDORestApiMethod `
-                                @script:AzApiHeaders `
-                                -Method Put `
-                                -Endpoint "work/processes/$processId/behaviors/$($behavior.referenceName)" `
-                                -Body ( $cleanBehavior | ConvertTo-Json -Compress ) `
-                                -NoRetry:$NoRetry -ErrorAction Stop
-                        }
-                        catch {
-                            Write-Warning "Could not import custom behavior '$($behavior.name)': $_"
-                            $failedBehaviors += [PSCustomObject]@{
-                                Name          = $behavior.name
-                                ReferenceName = $behavior.referenceName
-                                Error         = $_.Exception.Message
-                            }
-                        }
-                    }
-                    else {
-                        Write-Verbose "Custom behavior '$($behavior.name)' could not be imported: $_"
-                        $failedBehaviors += [PSCustomObject]@{
-                            Name          = $behavior.name
-                            ReferenceName = $behavior.referenceName
-                            Error         = $_.Exception.Message
-                        }
-                    }
+                elseif ($importResult.Skipped) {
+                    $skippedBehaviors += $importResult
                 }
             }
         }

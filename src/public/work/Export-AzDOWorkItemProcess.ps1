@@ -62,11 +62,7 @@ function Export-AzDOWorkItemProcess {
             Activity = "Exporting process '$ProcessName'"
         }
         Write-Progress @progress -Status 'Getting process definition...'
-        $processDefinition = Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Get `
-            -Endpoint "work/processes/$($process.typeId)" `
-            -NoRetry:$NoRetry
+        $processDefinition = Clear-AzDOObjectOrgData -InputObject $processDefinition
 
         Write-Progress @progress -Status 'Getting work item types...'
         $workItemTypes = Invoke-AzDORestApiMethod `
@@ -78,6 +74,8 @@ function Export-AzDOWorkItemProcess {
         $workItemTypesWIthDetails = @()
         $witTotal = $workItemTypes.Count
         $workItemTypesWIthDetails += foreach ($wit in $workItemTypes) {
+            $wit = Clear-AzDOObjectOrgData -InputObject $wit
+
             $witIndex = $workItemTypes.IndexOf($wit) + 1
             $witName = $wit.referenceName
 
@@ -90,33 +88,13 @@ function Export-AzDOWorkItemProcess {
             $progress['PercentComplete'] = ($witIndex / $witTotal) * 100
             Write-Progress @progress -CurrentOperation 'Fields'
 
-            $witFields = Invoke-AzDORestApiMethod `
+            $witWithContent.fields = Invoke-AzDORestApiMethod `
                 @script:AzApiHeaders `
                 -Method Get `
                 -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/fields" `
-                -NoRetry:$NoRetry
-
-            # Remove process namespaces to make exports portable between organizations
-            $witWithContent.fields = @(
-                foreach ($field in $witFields) {
-                    $fieldDef = $field | Select-Object -Property (
-                        'name',
-                        'referenceName',
-                        'isRequired',
-                        'isLocked',
-                        'isIdentity',
-                        'helpText',
-                        'defaultValue',
-                        'type'
-                    )
-
-                    if ($fieldDef.referenceName -notlike 'System.*' -and
-                        $fieldDef.referenceName -like "*$($processDefinition.name).*") {
-                        $fieldDef.referenceName = $fieldDef.referenceName -replace "^$($processDefinition.name)\."
-                    }
-                    $fieldDef
-                }
-            )
+                -NoRetry:$NoRetry | ForEach-Object {
+                Clear-AzDOObjectOrgData -InputObject $_
+            }
 
             Write-Progress @progress -CurrentOperation 'Rules'
             $witWithContent.rules = Invoke-AzDORestApiMethod `
@@ -157,9 +135,13 @@ function Export-AzDOWorkItemProcess {
             -Endpoint "work/processes/$($process.typeId)/behaviors" `
             -NoRetry:$NoRetry
 
+        $sanitizedBehaviors = foreach ($behavior in $processBehaviors) {
+            Clear-AzDOObjectOrgData -InputObject $behavior
+        }
+
         $processDefinition | Add-Member `
             -NotePropertyName behaviors `
-            -NotePropertyValue $processBehaviors
+            -NotePropertyValue $sanitizedBehaviors
 
         $progress['Status'] = 'Getting process fields...'
         Write-Progress @progress
@@ -167,13 +149,9 @@ function Export-AzDOWorkItemProcess {
         $processFields = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `
-            -Endpoint 'wit/fields' `
+            -Endpoint "work/processes/$($process.typeId)/fields" `
             -NoRetry:$NoRetry `
-            -ErrorAction Stop |
-            Where-Object {
-                $_.referenceName -notlike 'System.*' -and
-                $_.referenceName -like "*$($processDefinition.name).*"
-            }
+            -ErrorAction Stop
 
         $processDefinition | Add-Member `
             -NotePropertyName fields `
