@@ -36,6 +36,8 @@ function Export-AzDOWorkItemProcess {
     )
 
     begin {
+        . "$PSScriptRoot\..\..\private\Clear-AzDOObjectOrgData.ps1"
+
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
@@ -62,7 +64,7 @@ function Export-AzDOWorkItemProcess {
             Activity = "Exporting process '$ProcessName'"
         }
         Write-Progress @progress -Status 'Getting process definition...'
-        $processDefinition = Clear-AzDOObjectOrgData -InputObject $processDefinition
+        $processDefinition = Clear-AzDOObjectOrgData -InputObject $process
 
         Write-Progress @progress -Status 'Getting work item types...'
         $workItemTypes = Invoke-AzDORestApiMethod `

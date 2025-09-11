@@ -15,7 +15,7 @@ AzDOCmd is a PowerShell module providing API wrappers for Azure DevOps. The modu
   - `repositories/` - Repository management
   - `utils/` - Utility functions
   - `work/` - Work item processes and management
-- **`src/private/`**: Internal helper functions (e.g., `Get-AzDOApiProjectName.ps1`)
+- **`src/private/`**: Internal helper functions (e.g., `Get-AzDOApiProjectName.ps1`, `Clear-AzDOObjectOrgData.ps1`)
 
 ### Function Naming Convention
 All functions follow PowerShell approved verbs: `Get-AzDO*`, `Set-AzDO*`, `New-AzDO*`, `Remove-AzDO*`, `Add-AzDO*`, `Export-AzDO*`, `Import-AzDO*`, etc.
@@ -41,16 +41,19 @@ function Verb-AzDONoun {
     )
 
     begin {
+        # Dot-source any required private functions FIRST
+        . "$PSScriptRoot\..\..\private\HelperFunction.ps1"
+
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
-            ApiVersion    = '6.0'  # Update as needed
+            ApiVersion    = '7.1'  # Use 7.1 for current functions, adjust as needed
         }
     }
 
     process {
         # Project parameter processing (for pipeline scenarios)
-        . $PSScriptRoot\..\..\private\Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot\..\..\private\Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         # API call using standard pattern
@@ -63,6 +66,8 @@ function Verb-AzDONoun {
     }
 }
 ```
+
+**Note**: Some functions may have variations in parameter order based on their specific needs, but the standard parameters should always be last. Functions that don't use `$Project` may not need `Get-AzDOApiProjectName` processing.
 
 ### Key Implementation Rules
 1. **Parameter Order**: Function-specific params first, then `[Switch]$NoRetry`, then the three standard params in exact order
@@ -96,21 +101,50 @@ Invoke-PSModuleAnalyzer -Fix
 ```
 
 ### Testing Requirements
-- Every function needs a corresponding `.Tests.ps1` file
-- Use Pester framework with standard structure:
+- Every function needs a corresponding `.Tests.ps1` file in the same directory
+- Use Pester framework with standardized structure based on test type:
+
+**Unit Tests** (for private functions and isolated testing):
 ```powershell
-Describe 'Tests' {
+Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
-        Get-Module -Name AzDO -All | Remove-Module -Force -ErrorAction SilentlyContinue
-        Import-Module -Name "$PSScriptRoot/../../AzDO.psm1" -Force
+        Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
+        Import-Module -Name "$PSScriptRoot/../AzDOCmd.psm1" -Force
+
+        # Dot source the function under test (for private functions)
+        . "$PSScriptRoot/FunctionName.ps1"
     }
-    # Test cases here
+    # Test cases with mocking for dependencies
 }
 ```
 
+**Integration Tests** (for public functions with real API calls):
+```powershell
+Describe 'Integration Tests' -Tag 'Integration' {
+    BeforeAll {
+        Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
+        Import-Module -Name "$PSScriptRoot/../../AzDOCmd.psm1" -Force
+    }
+    # Test cases with real environment dependencies
+}
+```
+
+### Testing Best Practices
+- **Private Functions**: Use unit tests with comprehensive mocking of dependencies like `Invoke-AzDORestApiMethod`
+- **Mocking**: Always specify `-ModuleName AzDOCmd` when mocking functions to ensure proper scope
+- **Coverage**: Include parameter validation, error handling, success paths, and edge cases
+- **Assertions**: Use `Should -Invoke` to verify mock calls and `Should` operators for output validation
+
 ## Dependencies & Environment
 - **Environment Variables**: Functions default to Azure DevOps pipeline variables (`SYSTEM_*`)
-- **API Versions**: Use appropriate Azure DevOps REST API versions (typically 7.1)
+- **API Versions**: Use API version 7.1 for current development (updated from older 6.0 references)
+- **Private Function Dependencies**: Always dot-source required private functions in the `begin` block
+
+## Error Handling & Validation
+- **Parameter Validation**: Use PowerShell parameter attributes and validation
+- **API Error Handling**: Use `ErrorAction Stop` for critical operations that should halt execution
+- **User Feedback**: Use `Write-Warning` for non-fatal issues, `Write-Progress` for long operations
+- **Null/Empty Checks**: Always validate required objects and parameters before processing
 
 ## Special Considerations
 
@@ -125,12 +159,44 @@ The `work/` area handles complex Azure DevOps process import/export. The `Export
 - **API Method Patterns**: POST is used for creation, with a fallback to PUT for updates if `-Force` is specified.
 - **Summary Reporting**: The import function provides a detailed summary report at the end of execution, categorizing failed and skipped items to provide clear, actionable feedback instead of noisy inline warnings.
 - **Force Parameter Logic**: Controls overwriting existing components across all process elements.
+- **Required Private Functions**: Both functions require proper dot-sourcing of private helpers:
+  - `Clear-AzDOObjectOrgData.ps1` (both Export and Import)
+  - `Import-AzDOProcessField.ps1` (Import only)
+  - `Import-AzDOBehavior.ps1` (Import only)
+
+### Common Implementation Patterns
+- **Dot-Sourcing**: Always use `"$PSScriptRoot\..\..\private\FunctionName.ps1"` syntax with double quotes for proper path resolution
+- **Progress Reporting**: Use `Write-Progress` with consistent Activity/Status/PercentComplete patterns for long operations
+- **Object Processing**: Use `foreach` constructs with proper variable scoping for collection processing
+- **Return Handling**: Prefer direct output over `return` statements; use `return` only for early exits
 
 ### Pipeline Integration  
 Functions support Azure DevOps pipeline contexts through:
 - Default parameter values from environment variables
 - `Project` parameter accepting objects from pipeline (processed via `Get-AzDOApiProjectName`)
 - `ValueFromPipelineByPropertyName` for seamless pipeline integration
+
+## Debugging & Troubleshooting
+
+### Common Issues & Solutions
+1. **Function Not Found Errors**: Usually indicates missing dot-sourcing of private functions in the `begin` block
+2. **Variable Not Defined**: Check for proper variable initialization before use (e.g., `$processDefinition` vs `$process`)
+3. **API Authentication Failures**: Verify `Initialize-AzDORestApi` is called with valid PAT in the `begin` block
+4. **Path Resolution Issues**: Always use `"$PSScriptRoot\..\..\private\FunctionName.ps1"` with double quotes for dot-sourcing
+
+### Testing Troubleshooting
+1. **Mock Not Working**: Ensure `-ModuleName AzDOCmd` is specified for all Mock commands
+2. **Should -Invoke Failures**: Verify mock function names match exactly, including case sensitivity
+3. **Module Import Issues**: Use full path `"$PSScriptRoot/../AzDOCmd.psm1"` or `"$PSScriptRoot/../../AzDOCmd.psm1"` depending on test location
+
+### Validation Checklist
+Before committing new functions:
+- [ ] Private functions are dot-sourced in `begin` block
+- [ ] API version is set to 7.1 (current standard)
+- [ ] Standard parameter order is followed
+- [ ] Proper error handling with `ErrorAction Stop` where needed
+- [ ] Test file exists with matching name pattern
+- [ ] Help comments are comprehensive for wiki generation
 
 ## File Organization Rules
 - One function per `.ps1` file with matching filename
