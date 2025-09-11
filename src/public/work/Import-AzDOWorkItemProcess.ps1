@@ -158,6 +158,24 @@ function Import-AzDOWorkItemProcess {
                 if ($importResult.Success) {
                     $importedFields += $importResult
                 }
+                else {
+                    # Field creation failed - track the actual failure from Import-AzDOProcessField
+                    $failedFields += [PSCustomObject]@{
+                        Name          = $importResult.Name
+                        ReferenceName = $importResult.ReferenceName
+                        Type          = $importResult.Type
+                        Error         = $importResult.Error
+                        Category      = if ($importResult.Action -eq "Used Existing Standard Field") {
+                            "Standard Field Mapped"
+                        }
+                        elseif ($importResult.Action -eq "Created with Process Prefix") {
+                            "Custom Field Renamed"
+                        }
+                        else {
+                            "Field Creation Error"
+                        }
+                    }
+                }
             }
         }
 

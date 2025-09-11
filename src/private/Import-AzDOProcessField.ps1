@@ -106,6 +106,14 @@ function Import-AzDOProcessField {
             }
             catch {
                 Write-Warning "Auto-resolution failed for field '$($Field.name)': $_"
+                return [PSCustomObject]@{
+                    Success       = $false
+                    Name          = $Field.name
+                    ReferenceName = $Field.referenceName
+                    Type          = $Field.type
+                    Error         = $_.Exception.Message
+                    Action        = 'Auto-resolution Failed'
+                }
             }
         }
 
@@ -116,8 +124,12 @@ function Import-AzDOProcessField {
             Write-Verbose "Field $($fieldToImport.referenceName) may already exist: $_"
         }
         return [PSCustomObject]@{
-            Success = $false
-            Error   = $_.Exception.Message
+            Success       = $false
+            Name          = $Field.name
+            ReferenceName = $Field.referenceName
+            Type          = $Field.type
+            Error         = $_.Exception.Message
+            Action        = 'Failed'
         }
     }
 }
