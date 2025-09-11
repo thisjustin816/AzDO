@@ -66,7 +66,7 @@ function Add-AzDOWorkItemRelation {
     }
 
     process {
-        . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         $relationTypeMap = & $PSScriptRoot/../../private/AzDOWorkItemRelationTypeMap.ps1

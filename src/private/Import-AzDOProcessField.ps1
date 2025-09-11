@@ -56,6 +56,19 @@ function Import-AzDOProcessField {
             $fieldToImport.referenceName = "$ProcessName.$($fieldToImport.referenceName)"
         }
 
+        # Remove organization-specific properties that can cause API errors
+        $propsToRemove = @('id', 'url', '_links', 'usage')
+        foreach ($prop in $propsToRemove) {
+            if ($fieldToImport.PSObject.Properties[$prop]) {
+                $fieldToImport.PSObject.Properties.Remove($prop)
+            }
+        }
+
+        # Ensure friendlyName exists (some APIs expect this)
+        if (-not $fieldToImport.friendlyName -and $fieldToImport.name) {
+            $fieldToImport | Add-Member -MemberType NoteProperty -Name 'friendlyName' -Value $fieldToImport.name -Force
+        }
+
         $fieldErrorAction = if ($Force) { 'Stop' } else { 'SilentlyContinue' }
         Invoke-AzDORestApiMethod @ApiHeaders `
             -Method Post `
@@ -89,6 +102,12 @@ function Import-AzDOProcessField {
             # Custom field - rename with process prefix
             $processName = $ProcessName -replace '\s', ''
             $fieldToImport.name = "$processName.$($Field.name)"
+
+            # Update friendlyName to match the new name
+            if ($fieldToImport.friendlyName) {
+                $fieldToImport.friendlyName = $fieldToImport.name
+            }
+
             try {
                 Invoke-AzDORestApiMethod @ApiHeaders `
                     -Method Post `

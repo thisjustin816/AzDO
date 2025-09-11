@@ -42,7 +42,7 @@ function Verb-AzDONoun {
 
     begin {
         # Dot-source any required private functions FIRST
-        . "$PSScriptRoot\..\..\private\HelperFunction.ps1"
+        . "$PSScriptRoot/../../private/HelperFunction.ps1"
 
         $script:AzApiHeaders = @{
             Headers       = Initialize-AzDORestApi -Pat $Pat
@@ -53,7 +53,7 @@ function Verb-AzDONoun {
 
     process {
         # Project parameter processing (for pipeline scenarios)
-        . "$PSScriptRoot\..\..\private\Get-AzDOApiProjectName.ps1"
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         # API call using standard pattern
@@ -169,7 +169,7 @@ The `work/` area handles complex Azure DevOps process import/export. The `Export
   - `Import-AzDOBehavior.ps1` (Import only)
 
 ### Common Implementation Patterns
-- **Dot-Sourcing**: Always use `"$PSScriptRoot\..\..\private\FunctionName.ps1"` syntax with double quotes for proper path resolution
+- **Dot-Sourcing**: Always use `"$PSScriptRoot/../../private/FunctionName.ps1"` syntax with double quotes for proper path resolution and forward slashes for cross-platform compatibility
 - **Progress Reporting**: Use `Write-Progress` with consistent Activity/Status/PercentComplete patterns for long operations
 - **Object Processing**: Use `foreach` constructs with proper variable scoping for collection processing
 - **Return Handling**: Prefer direct output over `return` statements; use `return` only for early exits
@@ -186,7 +186,7 @@ Functions support Azure DevOps pipeline contexts through:
 1. **Function Not Found Errors**: Usually indicates missing dot-sourcing of private functions in the `begin` block
 2. **Variable Not Defined**: Check for proper variable initialization before use (e.g., `$processDefinition` vs `$process`)
 3. **API Authentication Failures**: Verify `Initialize-AzDORestApi` is called with valid PAT in the `begin` block
-4. **Path Resolution Issues**: Always use `"$PSScriptRoot\..\..\private\FunctionName.ps1"` with double quotes for dot-sourcing
+4. **Path Resolution Issues**: Always use `"$PSScriptRoot/../../private/FunctionName.ps1"` with double quotes and forward slashes for cross-platform dot-sourcing
 
 ### Testing Troubleshooting
 1. **Mock Not Working**: Ensure `-ModuleName AzDOCmd` is specified for all Mock commands

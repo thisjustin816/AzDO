@@ -57,7 +57,7 @@ function Update-AzDOReleasePipeline {
     }
 
     process {
-        . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         if ($PSCmdlet.ShouldProcess(

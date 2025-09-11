@@ -32,7 +32,7 @@ $script:AzApiHeaders = @{
 The function's `process` block should start with the following code to process the `$Project` parameter if it was passed from the pipeline:
 
 ```powershell
-. $PSScriptRoot\..\..\private\Get-AzDOApiProjectName.ps1
+. "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
 $Project = $Project | Get-AzDOApiProjectName
 ```
 
