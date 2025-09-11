@@ -50,6 +50,7 @@ function Import-AzDOProcessField {
 
     try {
         $fieldToImport = $Field.PSObject.Copy()
+        # Ensure field reference name includes process namespace for portability
         if ($fieldToImport.referenceName -notlike "*$ProcessName.*") {
             $fieldToImport.referenceName = "$ProcessName.$($fieldToImport.referenceName)"
         }

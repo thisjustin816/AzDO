@@ -1,17 +1,13 @@
 ﻿Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
-        # Remove and re-import the module to ensure latest version is loaded
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
         Import-Module (Join-Path $PSScriptRoot '..' 'AzDOCmd.psm1') -Force
 
-        # Dot-source the private functions we're testing
         . (Join-Path $PSScriptRoot 'Import-AzDOProcessField.ps1')
 
-        # Mock dependencies
         Mock Invoke-AzDORestApiMethod {
             param($Uri, $Method, $Body, $Headers, $NoRetry)
-            # Function doesn't use the return value, so don't return anything
-            # to avoid adding to the output stream
+            # No return value needed as function doesn't use response
         }
     }
 

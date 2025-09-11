@@ -112,7 +112,7 @@ function Export-AzDOWorkItemProcess {
                 -Endpoint "work/processes/$($process.typeId)/workitemtypes/$witName/states" `
                 -NoRetry:$NoRetry
 
-            # Test work item types have locked layouts
+            # Microsoft Test work item types have read-only layouts
             if (-not $witName.StartsWith('Microsoft.VSTS.WorkItemTypes.Test')) {
                 Write-Progress @progress -CurrentOperation 'Layout'
                 $witWithContent.layout = Invoke-AzDORestApiMethod `
@@ -147,7 +147,6 @@ function Export-AzDOWorkItemProcess {
 
         $progress['Status'] = 'Getting process fields...'
         Write-Progress @progress
-        # Only export custom fields specific to this process for portability
         $processFields = Invoke-AzDORestApiMethod `
             @script:AzApiHeaders `
             -Method Get `

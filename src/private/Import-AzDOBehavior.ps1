@@ -53,7 +53,7 @@ function Import-AzDOBehavior {
         [Switch]$NoRetry
     )
 
-    # Skip organization-specific GUID behaviors
+    # Filter out organization-specific GUID behaviors that aren't portable
     $guidPattern = '^Custom\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     if ($Behavior.referenceName -match $guidPattern) {
         Write-Warning "Skipping org-specific behavior: $($Behavior.name) ($($Behavior.referenceName))"

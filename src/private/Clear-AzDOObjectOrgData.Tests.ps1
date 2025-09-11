@@ -3,7 +3,6 @@
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
         Import-Module -Name "$PSScriptRoot/../AzDOCmd.psm1" -Force
 
-        # Dot source the function under test
         . "$PSScriptRoot/Clear-AzDOObjectOrgData.ps1"
     }
 
@@ -88,7 +87,7 @@
         It 'should handle empty input gracefully' {
             $emptyObject = [PSCustomObject]@{}
             $result = Clear-AzDOObjectOrgData -InputObject $emptyObject
-            # Function returns null for empty objects since they are falsy
+            # Empty objects are considered false and returned as null
             $result | Should -BeNull
         }
 

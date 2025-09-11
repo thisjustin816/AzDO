@@ -3,7 +3,6 @@ Describe 'Unit Tests' -Tag 'Unit' {
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
         Import-Module -Name "$PSScriptRoot\..\AzDOCmd.psm1" -Force
 
-        # Dot source the function under test
         . "$PSScriptRoot\Get-AzDOApiProjectName.ps1"
     }
 

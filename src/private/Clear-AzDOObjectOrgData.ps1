@@ -39,17 +39,14 @@ function Clear-AzDOObjectOrgData {
         return $null
     }
 
-    # Create a copy to avoid modifying the original object in the pipeline
     $cleanObject = $InputObject.PSObject.Copy()
 
-    # Remove specified properties from the top-level object
     foreach ($prop in $PropertiesToRemove) {
         if ($cleanObject.PSObject.Properties[$prop]) {
             $cleanObject.PSObject.Properties.Remove($prop)
         }
     }
 
-    # Recurse into nested properties
     foreach ($property in $cleanObject.PSObject.Properties) {
         $value = $property.Value
         if ($value -is [PSObject]) {

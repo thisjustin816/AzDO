@@ -59,7 +59,7 @@ function Import-AzDOWorkItemProcess {
             ApiVersion    = '7.1'
         }
 
-        # Organization-specific properties to remove from behavior objects
+        # Properties to sanitize from behavior objects for cross-org compatibility
         $script:OrgSpecificProps = @('inherits', 'url', '_links', 'id', 'customization', 'referenceName', 'rank')
     }
 
@@ -132,7 +132,7 @@ function Import-AzDOWorkItemProcess {
             )
         }
 
-        # Process-level fields must be created before work item types can reference them
+        # Import process fields before work item types to avoid reference errors
         if ($processDefinition.fields) {
             $fieldCount = $processDefinition.fields.Count
             foreach ($field in $processDefinition.fields) {
@@ -155,7 +155,7 @@ function Import-AzDOWorkItemProcess {
             }
         }
 
-        # Behaviors may be referenced by work item type configurations
+        # Import behaviors before work item types to satisfy dependency requirements
         if ($processDefinition.behaviors) {
             $failedBehaviors = @()
             $skippedBehaviors = @()
@@ -163,7 +163,7 @@ function Import-AzDOWorkItemProcess {
             $systemBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -like 'System.*' }
             $customBehaviors = $processDefinition.behaviors | Where-Object { $_.referenceName -notlike 'System.*' }
 
-            # Process system behaviors first - these should already exist and just need assignment
+            # System behaviors already exist in target process and need linking only
             foreach ($behavior in $systemBehaviors) {
                 $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
                 $progress['Status'] = "Assigning system behavior ($behaviorIndex of $behaviorCount): $($behavior.name)"
@@ -174,7 +174,7 @@ function Import-AzDOWorkItemProcess {
                 Write-Verbose "Skipping creation of system behavior '$($behavior.name)' - should already exist"
             }
 
-            # Process custom behaviors
+            # Custom behaviors require creation in the target process
             foreach ($behavior in $customBehaviors) {
                 $behaviorIndex = $processDefinition.behaviors.IndexOf($behavior) + 1
                 $progress['Status'] = "Importing custom behavior ($behaviorIndex of $behaviorCount): $($behavior.name)"
@@ -199,6 +199,7 @@ function Import-AzDOWorkItemProcess {
             }
         }
 
+        # Work item types import after fields and behaviors are established
         if ($processDefinition.workItemTypes) {
             $witTotal = $processDefinition.workItemTypes.Count
             foreach ($wit in $processDefinition.workItemTypes) {
@@ -214,7 +215,7 @@ function Import-AzDOWorkItemProcess {
                     continue
                 }
 
-                # Create custom work item type
+                # Custom work item types require creation in target process
                 try {
                     $body = $wit |
                         Select-Object -Property color, description, icon, isDisabled, name, referenceName |
@@ -450,7 +451,6 @@ function Import-AzDOWorkItemProcess {
         }
 
         if ($failedFields.Count -gt 0) {
-            # Group errors by category for organized reporting
             $errorsByCategory = $failedFields | Group-Object -Property Category
 
             Write-Warning "`nField import errors by category:"
@@ -502,7 +502,6 @@ To manually configure these behaviors:
 "@
         }
 
-        # Report skipped system types
         $skippedTypes = $processDefinition.workItemTypes | Where-Object {
             $_.referenceName.StartsWith('Microsoft.VSTS.WorkItemTypes.') -or $_.referenceName.StartsWith('System.')
         }
@@ -513,7 +512,6 @@ To manually configure these behaviors:
             }
         }
 
-        # Report skipped behaviors
         if ($skippedBehaviors -and $skippedBehaviors.Count -gt 0) {
             Write-Host "`nSkipped organization-specific behaviors:" -ForegroundColor Yellow
             $skippedBehaviors | ForEach-Object {

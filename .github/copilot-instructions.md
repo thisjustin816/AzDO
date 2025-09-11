@@ -74,7 +74,11 @@ function Verb-AzDONoun {
 2. **API Headers**: Always use `$script:AzApiHeaders` with `Initialize-AzDORestApi`
 3. **Project Processing**: Always dot-source and use `Get-AzDOApiProjectName` for pipeline compatibility
 4. **Splatting**: Use `@script:AzApiHeaders` splatting for `Invoke-AzDORestApiMethod`
-5. **Comments**: Include comments to explain complex logic or API interactions. Don't just state what the code is doing.
+5. **Comments**: 
+   - **DO**: Explain WHY decisions were made, business logic, API constraints, cross-organization compatibility concerns
+   - **DON'T**: State what the code is doing (if it's obvious from reading the code)
+   - **REMOVE**: Comments that just describe the code flow (e.g., "Create a copy", "Process each item", "Find the index")
+   - **KEEP**: Comments that explain complex business rules, API limitations, or technical constraints
 6. **Outputs**: Only use return when necessary. I.e. prefer outputting objects directly rather than using return statements.
 7. **Private Functions**: Private helper functions should be dot-sourced in the `begin` block of the public function that uses them. They should not be loaded in the main `.psm1` file.
 

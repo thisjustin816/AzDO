@@ -75,7 +75,6 @@ function Remove-AzDOWorkItemRelation {
                 -CollectionUri $CollectionUri `
                 -Pat $Pat
 
-            # Find the index of the link to remove
             $linkIndex = @(
                 $workItem.relations |
                     Where-Object { $_.rel -eq $apiRelationType } |

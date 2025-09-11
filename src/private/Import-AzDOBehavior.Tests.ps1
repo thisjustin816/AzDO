@@ -1,17 +1,13 @@
 ﻿Describe 'Unit Tests' -Tag 'Unit' {
     BeforeAll {
-        # Remove and re-import the module to ensure latest version is loaded
         Get-Module -Name AzDOCmd -All | Remove-Module -Force -ErrorAction SilentlyContinue
         Import-Module (Join-Path $PSScriptRoot '..' 'AzDOCmd.psm1') -Force
 
-        # Dot-source the private functions we're testing
         . (Join-Path $PSScriptRoot 'Clear-AzDOObjectOrgData.ps1')
         . (Join-Path $PSScriptRoot 'Import-AzDOBehavior.ps1')
 
-        # Mock dependencies
         Mock Clear-AzDOObjectOrgData {
             param($InputObject, $PropertiesToRemove)
-            # Return a simplified version of the input object
             $cleanObj = $InputObject.PSObject.Copy()
             foreach ($prop in $PropertiesToRemove) {
                 if ($cleanObj.PSObject.Properties[$prop]) {
@@ -78,7 +74,6 @@
         }
 
         It 'should attempt PUT when POST fails and Force is specified' {
-            # Mock POST to fail, PUT to succeed
             Mock Invoke-AzDORestApiMethod {
                 param($Uri, $Method, $Body, $Headers, $NoRetry)
                 if ($Method -eq 'POST') {
