@@ -71,6 +71,7 @@ function Import-AzDOWorkItemProcess {
     process {
         $failedFields = @()
         $importedFields = @()
+        $nameConflictWorkItemTypes = @()
 
         $progress = @{
             Activity = "Importing process from '$Path'"
@@ -240,6 +241,7 @@ function Import-AzDOWorkItemProcess {
                 }
 
                 # Custom work item types require creation in target process
+                $witCreatedSuccessfully = $false
                 try {
                     $body = $wit |
                         Select-Object -Property color, description, icon, isDisabled, name, referenceName |
@@ -253,6 +255,7 @@ function Import-AzDOWorkItemProcess {
                             -Body $body `
                             -NoRetry:$NoRetry `
                             -ErrorAction Stop
+                        $witCreatedSuccessfully = $true
                     }
                     catch {
                         if ($Force) {
@@ -266,18 +269,49 @@ function Import-AzDOWorkItemProcess {
                                     -Endpoint "work/processes/$processId/workitemtypes/$witName" `
                                     -Body $updateBody `
                                     -NoRetry:$NoRetry -ErrorAction Stop
+                                $witCreatedSuccessfully = $true
                             }
                             catch {
-                                Write-Warning "Could not create or update work item type '$witName': $_"
+                                $isNameConflict = $_.Exception.Message -like "*VS403066*" -and `
+                                    $_.Exception.Message -like "*already in use*"
+                                if ($isNameConflict) {
+                                    $nameConflictWorkItemTypes += $witName
+                                    Write-Verbose "Work item type '$witName' already exists and conflicts detected"
+                                }
+                                else {
+                                    Write-Warning "Could not create or update work item type '$witName': $_"
+                                }
                             }
                         }
                         else {
-                            Write-Verbose "Work item type '$witName' may already exist: $_"
+                            $isNameConflict = $_.Exception.Message -like "*VS403066*" -and `
+                                $_.Exception.Message -like "*already in use*"
+                            if ($isNameConflict) {
+                                $nameConflictWorkItemTypes += $witName
+                                Write-Verbose "Work item type '$witName' already exists (use -Force to overwrite)"
+                            }
+                            else {
+                                Write-Verbose "Work item type '$witName' may already exist: $_"
+                            }
                         }
                     }
                 }
                 catch {
-                    Write-Warning "Could not create/update work item type '$witName': $_"
+                    $isNameConflict = $_.Exception.Message -like "*VS403066*" -and `
+                        $_.Exception.Message -like "*already in use*"
+                    if ($isNameConflict) {
+                        $nameConflictWorkItemTypes += $witName
+                        Write-Verbose "Work item type '$witName' already exists"
+                    }
+                    else {
+                        Write-Warning "Could not create/update work item type '$witName': $_"
+                    }
+                }
+
+                # Skip dependent operations if work item type creation failed
+                if (-not $witCreatedSuccessfully) {
+                    Write-Verbose "Skipping dependent operations for work item type '$witName' due to creation failure"
+                    continue
                 }
 
                 if ($wit.states) {
@@ -474,6 +508,16 @@ function Import-AzDOWorkItemProcess {
         Write-Progress @progress -Completed
 
         Write-Host "`nImport Summary:" -ForegroundColor Cyan
+
+        if ($nameConflictWorkItemTypes.Count -gt 0) {
+            Write-Warning "`nWork item types already exist and were skipped (use -Force to overwrite):"
+            foreach ($witName in $nameConflictWorkItemTypes) {
+                $displayName = $witName.Split('.')[-1]
+                Write-Host "- $displayName ($witName)" -ForegroundColor Yellow
+            }
+            Write-Host "`nThis is expected when re-importing a process. Use the -Force parameter to " + `
+                "overwrite existing work item types." -ForegroundColor Cyan
+        }
 
         if ($importedFields.Count -gt 0) {
             Write-Host "`nSuccessfully imported fields:" -ForegroundColor Green
