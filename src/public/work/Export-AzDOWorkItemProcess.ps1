@@ -4,13 +4,17 @@ Exports a work item process definition to a JSON file.
 
 .DESCRIPTION
 Exports a work item process definition to a JSON file. This can be used to backup process definitions
-or prepare them for import into another organization.
+or prepare them for import into another organization. The exported file includes enhanced metadata
+to improve import success rates and provides guidance on expected auto-resolution capabilities.
 
 .PARAMETER ProcessName
 The name of the work item process to export.
 
 .PARAMETER Destination
 The destination folder where the JSON file will be saved.
+
+.PARAMETER NoRetry
+A switch to disable the default retry mechanism for REST API calls.
 
 .PARAMETER Pat
 Personal access token with Process (read) permissions. Defaults to $env:SYSTEM_ACCESSTOKEN.
@@ -21,8 +25,20 @@ The collection URI of the Azure DevOps organization. Defaults to $env:SYSTEM_COL
 .EXAMPLE
 Export-AzDOWorkItemProcess -ProcessName "Agile" -Destination "C:/Temp"
 
+.EXAMPLE
+Export-AzDOWorkItemProcess -ProcessName "CustomProcess" -Destination ".\Exports" -NoRetry
+
+.OUTPUTS
+FileInfo. Returns the FileInfo object of the exported JSON file.
+
 .NOTES
 This function requires Process (read) permissions in the organization.
+
+The exported JSON includes:
+- Enhanced field metadata for import optimization
+- Export summary with statistics
+- Import guidance including expected auto-resolution rates
+- Recommendations for using AutoResolveConflicts during import
 #>
 function Export-AzDOWorkItemProcess {
     [CmdletBinding()]
@@ -154,18 +170,93 @@ function Export-AzDOWorkItemProcess {
             -NoRetry:$NoRetry `
             -ErrorAction Stop
 
+        # Enhance fields with classification metadata to improve import success rates
+        $enhancedFields = foreach ($field in $processFields) {
+            $cleanField = Clear-AzDOObjectOrgData -InputObject $field
+
+            # Add field classification for better import handling
+            $isSystemField = $field.referenceName -like 'System.*'
+            $isStandardField = $field.referenceName -like 'Microsoft.VSTS.*'
+            $isCustomField = $field.referenceName -like 'Custom.*'
+
+            $cleanField | Add-Member -NotePropertyName '_exportMetadata' -NotePropertyValue @{
+                isSystemField   = $isSystemField
+                isStandardField = $isStandardField
+                isCustomField   = $isCustomField
+                fieldCategory   = if ($isSystemField) { 'System' }
+                                 elseif ($isStandardField) { 'Standard' }
+                                 elseif ($isCustomField) { 'Custom' }
+                                 else { 'Unknown' }
+                exportedAt      = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+            } -Force
+
+            $cleanField
+        }
+
         $processDefinition | Add-Member `
             -NotePropertyName fields `
-            -NotePropertyValue $processFields
+            -NotePropertyValue $enhancedFields
 
         $progress['Status'] = 'Finalizing export...'
         Write-Progress @progress -Completed
+
+        # Generate export summary
+        $systemFieldCount = ($enhancedFields | Where-Object { $_._exportMetadata.fieldCategory -eq 'System' }).Count
+        $standardFieldCount = ($enhancedFields | Where-Object { $_._exportMetadata.fieldCategory -eq 'Standard' }).Count
+        $customFieldCount = ($enhancedFields | Where-Object { $_._exportMetadata.fieldCategory -eq 'Custom' }).Count
+        $witCount = $workItemTypesWIthDetails.Count
+        $behaviorCount = $sanitizedBehaviors.Count
+
+        # Calculate auto-resolution percentage for import guidance
+        $autoResolutionRate = [math]::Round((($systemFieldCount + $standardFieldCount) /
+            $enhancedFields.Count) * 100, 1)
+
+        $exportSummary = @{
+            processName    = $ProcessName
+            exportedAt     = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+            statistics     = @{
+                workItemTypes  = $witCount
+                totalFields    = $enhancedFields.Count
+                systemFields   = $systemFieldCount
+                standardFields = $standardFieldCount
+                customFields   = $customFieldCount
+                behaviors      = $behaviorCount
+            }
+            importGuidance = @{
+                expectedAutoResolution        = $autoResolutionRate
+                customFieldsRequiringCreation = $customFieldCount
+                recommendation                = if ($customFieldCount -gt 0) {
+                    "Use -AutoResolveConflicts switch during import for optimal results"
+                }
+                else {
+                    "Standard import should work without conflicts"
+                }
+            }
+        }
+
+        $processDefinition | Add-Member `
+            -NotePropertyName '_exportSummary' `
+            -NotePropertyValue $exportSummary
 
         $outFileName = ($ProcessName -replace '[^\w\-\.]', '_').ToLower() + '.json'
         $outFileName = Join-Path -Path $Destination -ChildPath $outFileName
         $processDefinition |
             ConvertTo-Json -Depth 100 |
             Out-File -FilePath $outFileName -Encoding UTF8 -Force
+
+        # Display export summary to user
+        Write-Host "Successfully exported process '$ProcessName'" -ForegroundColor Green
+        Write-Host "Export Summary:" -ForegroundColor Cyan
+        Write-Host "  Work Item Types: $witCount" -ForegroundColor White
+        Write-Host "  Total Fields: $($enhancedFields.Count)" -ForegroundColor White
+        Write-Host "    - System Fields: $systemFieldCount" -ForegroundColor Gray
+        Write-Host "    - Standard Fields: $standardFieldCount" -ForegroundColor Gray
+        Write-Host "    - Custom Fields: $customFieldCount" -ForegroundColor Yellow
+        Write-Host "  Behaviors: $behaviorCount" -ForegroundColor White
+        Write-Host "  Expected Auto-Resolution Rate: $($exportSummary.importGuidance.expectedAutoResolution)%" `
+            -ForegroundColor Green
+        Write-Host "  Recommendation: $($exportSummary.importGuidance.recommendation)" -ForegroundColor Cyan
+        Write-Host "  File: $outFileName" -ForegroundColor White
 
         Get-Item -Path $outFileName
     }

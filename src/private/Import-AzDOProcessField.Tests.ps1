@@ -167,7 +167,7 @@
         It 'should use existing standard field on name conflict (VS402803)' {
             # First call throws name conflict, function should recognize standard field and stop
             Mock Invoke-AzDORestApiMethod {
-                throw "VS402803: name conflict with existing field"
+                throw "VS402803: already in use"
             }
 
             $field = [PSCustomObject]@{
@@ -188,7 +188,7 @@
             Mock Invoke-AzDORestApiMethod {
                 $script:calls++
                 if ($script:calls -eq 1) {
-                    throw "VS402803: name conflict with existing field"
+                    throw "VS402803: already in use"
                 }
                 # second call succeeds (no output required)
             }
@@ -202,7 +202,7 @@
             $result = Import-AzDOProcessField -Field $field -ProcessName 'MyProcess' -ApiHeaders @{} -AutoResolveConflicts
 
             $result.Success | Should -BeTrue
-            $result.Action  | Should -Be 'Created with Process Prefix'
+            $result.Action  | Should -Be 'Created Custom Field'
             Should -Invoke -CommandName 'Invoke-AzDORestApiMethod' -Exactly 2 -Scope It
         }
 

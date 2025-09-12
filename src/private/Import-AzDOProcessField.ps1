@@ -83,60 +83,47 @@ function Import-AzDOProcessField {
     }
     catch {
         $errorMessage = $_.Exception.Message
-
-        if ($AutoResolveConflicts -and $errorMessage -like "*name*conflict*") {
-            $isStandardField = $Field.referenceName -like "Microsoft.VSTS.*" -or $Field.referenceName -like "System.*"
-            if ($isStandardField) {
-                Write-Information "Standard field '$($Field.name)' exists - using existing" -InformationAction Continue
-                return [PSCustomObject]@{
-                    Success       = $true
-                    Name          = $Field.name
-                    ReferenceName = $Field.referenceName
-                    Type          = $Field.type
-                    Action        = 'Used Existing Standard Field'
-                }
-            }
-
-            $processName = $ProcessName -replace '\s', ''
-            $fieldToImport.name = "$processName.$($Field.name)"
-
-            if ($fieldToImport.friendlyName) {
-                $fieldToImport.friendlyName = $fieldToImport.name
-            }
-
-            try {
-                Invoke-AzDORestApiMethod @ApiHeaders `
-                    -Method Post `
-                    -Endpoint 'wit/fields' `
-                    -Body ($fieldToImport | ConvertTo-Json -Compress) `
-                    -NoRetry:$NoRetry
-
-                return [PSCustomObject]@{
-                    Success       = $true
-                    Name          = $fieldToImport.name
-                    ReferenceName = $fieldToImport.referenceName
-                    Type          = $Field.type
-                    Action        = 'Created with Process Prefix'
-                }
-            }
-            catch {
-                Write-Warning "Auto-resolution failed for field '$($Field.name)': $_"
-                return [PSCustomObject]@{
-                    Success       = $false
-                    Name          = $Field.name
-                    ReferenceName = $Field.referenceName
-                    Type          = $Field.type
-                    Error         = $_.Exception.Message
-                    Action        = 'Auto-resolution Failed'
-                }
-            }
-        }
+        $isSystemField   = $Field.referenceName -like 'System.*'
+        $isStandardField = $Field.referenceName -like 'Microsoft.VSTS.*'
+        $isCustomField   = $Field.referenceName -like 'Custom.*'
 
         if ($AutoResolveConflicts) {
-            $isCustomField = -not (
-                $Field.referenceName -like 'Microsoft.VSTS.*' -or
-                $Field.referenceName -like 'System.*'
-            )
+            # VS402803: name conflict (already in use)
+            if ($errorMessage -like '*VS402803*already in use*') {
+                if ($isSystemField -or $isStandardField) {
+                    return [PSCustomObject]@{
+                        Success       = $true
+                        Name          = $Field.name
+                        ReferenceName = $Field.referenceName
+                        Type          = $Field.type
+                        Action        = 'Used Existing Standard Field'
+                    }
+                }
+                # Custom field: fall through to existing custom field creation logic below
+            }
+            # 404: not found (field exists at runtime but not visible during import)
+            elseif ($errorMessage -like '*404*not found*') {
+                if ($isSystemField -or $isStandardField) {
+                    return [PSCustomObject]@{
+                        Success       = $true
+                        Name          = $Field.name
+                        ReferenceName = $Field.referenceName
+                        Type          = $Field.type
+                        Action        = 'Available at Runtime'
+                    }
+                }
+            }
+            # Any other error for standard fields: skip creation
+            elseif ($isSystemField -or $isStandardField) {
+                return [PSCustomObject]@{
+                    Success       = $true
+                    Name          = $Field.name
+                    ReferenceName = $Field.referenceName
+                    Type          = $Field.type
+                    Action        = 'Skipped - Standard Field'
+                }
+            }
+            # Custom field creation logic (unchanged)
             if ($isCustomField) {
                 $processName = $ProcessName -replace '\s', ''
                 $newFieldName = "$processName.$($Field.name)"
