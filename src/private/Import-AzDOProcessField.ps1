@@ -51,12 +51,10 @@ function Import-AzDOProcessField {
 
     try {
         $fieldToImport = $Field.PSObject.Copy()
-        # Ensure field reference name includes process namespace for portability
         if ($fieldToImport.referenceName -notlike "*$ProcessName.*") {
             $fieldToImport.referenceName = "$ProcessName.$($fieldToImport.referenceName)"
         }
 
-        # Remove organization-specific properties that can cause API errors
         $propsToRemove = @('id', 'url', '_links', 'usage')
         foreach ($prop in $propsToRemove) {
             if ($fieldToImport.PSObject.Properties[$prop]) {
@@ -64,7 +62,6 @@ function Import-AzDOProcessField {
             }
         }
 
-        # Ensure friendlyName exists (some APIs expect this)
         if (-not $fieldToImport.friendlyName -and $fieldToImport.name) {
             $fieldToImport | Add-Member -MemberType NoteProperty -Name 'friendlyName' -Value $fieldToImport.name -Force
         }
@@ -86,6 +83,7 @@ function Import-AzDOProcessField {
     }
     catch {
         $errorMessage = $_.Exception.Message
+
         if ($AutoResolveConflicts -and $errorMessage -like "*name*conflict*") {
             $isStandardField = $Field.referenceName -like "Microsoft.VSTS.*" -or $Field.referenceName -like "System.*"
             if ($isStandardField) {
@@ -99,11 +97,9 @@ function Import-AzDOProcessField {
                 }
             }
 
-            # Custom field - rename with process prefix
             $processName = $ProcessName -replace '\s', ''
             $fieldToImport.name = "$processName.$($Field.name)"
 
-            # Update friendlyName to match the new name
             if ($fieldToImport.friendlyName) {
                 $fieldToImport.friendlyName = $fieldToImport.name
             }
@@ -132,6 +128,64 @@ function Import-AzDOProcessField {
                     Type          = $Field.type
                     Error         = $_.Exception.Message
                     Action        = 'Auto-resolution Failed'
+                }
+            }
+        }
+
+        if ($AutoResolveConflicts) {
+            $isCustomField = -not (
+                $Field.referenceName -like 'Microsoft.VSTS.*' -or
+                $Field.referenceName -like 'System.*'
+            )
+            if ($isCustomField) {
+                $processName = $ProcessName -replace '\s', ''
+                $newFieldName = "$processName.$($Field.name)"
+                $newReferenceName = "$processName.$($Field.referenceName)"
+
+                $customFieldToCreate = $Field.PSObject.Copy()
+                $customFieldToCreate.name = $newFieldName
+                $customFieldToCreate.referenceName = $newReferenceName
+
+                @('id', 'url', '_links', 'usage') | ForEach-Object {
+                    if ($customFieldToCreate.PSObject.Properties[$_]) {
+                        $customFieldToCreate.PSObject.Properties.Remove($_)
+                    }
+                }
+
+                if (-not $customFieldToCreate.friendlyName -and $customFieldToCreate.name) {
+                    $customFieldToCreate | Add-Member `
+                        -MemberType NoteProperty `
+                        -Name 'friendlyName' `
+                        -Value $customFieldToCreate.name `
+                        -Force
+                }
+
+                try {
+                    Write-Information "Creating custom field '$newFieldName'" -InformationAction Continue
+                    Invoke-AzDORestApiMethod @ApiHeaders `
+                        -Method Post `
+                        -Endpoint 'wit/fields' `
+                        -Body ($customFieldToCreate | ConvertTo-Json -Compress) `
+                        -NoRetry:$NoRetry
+
+                    return [PSCustomObject]@{
+                        Success       = $true
+                        Name          = $customFieldToCreate.name
+                        ReferenceName = $customFieldToCreate.referenceName
+                        Type          = $Field.type
+                        Action        = 'Created Custom Field'
+                    }
+                }
+                catch {
+                    Write-Warning "Failed to create custom field '$($Field.name)': $_"
+                    return [PSCustomObject]@{
+                        Success       = $false
+                        Name          = $Field.name
+                        ReferenceName = $Field.referenceName
+                        Type          = $Field.type
+                        Error         = $_.Exception.Message
+                        Action        = 'Custom Field Creation Failed'
+                    }
                 }
             }
         }

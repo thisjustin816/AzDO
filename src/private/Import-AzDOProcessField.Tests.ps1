@@ -162,4 +162,71 @@
             } -Exactly 1 -Scope It
         }
     }
+
+    Context 'when AutoResolveConflicts is used' {
+        It 'should use existing standard field on name conflict (VS402803)' {
+            # First call throws name conflict, function should recognize standard field and stop
+            Mock Invoke-AzDORestApiMethod {
+                throw "VS402803: name conflict with existing field"
+            }
+
+            $field = [PSCustomObject]@{
+                referenceName = 'System.Title'
+                name          = 'Title'
+                type          = 'string'
+            }
+
+            $result = Import-AzDOProcessField -Field $field -ProcessName 'MyProcess' -ApiHeaders @{} -AutoResolveConflicts
+
+            $result.Success | Should -BeTrue
+            $result.Action  | Should -Be 'Used Existing Standard Field'
+            Should -Invoke -CommandName 'Invoke-AzDORestApiMethod' -Exactly 1 -Scope It
+        }
+
+        It 'should rename and create custom field on name conflict (VS402803)' {
+            $script:calls = 0
+            Mock Invoke-AzDORestApiMethod {
+                $script:calls++
+                if ($script:calls -eq 1) {
+                    throw "VS402803: name conflict with existing field"
+                }
+                # second call succeeds (no output required)
+            }
+
+            $field = [PSCustomObject]@{
+                referenceName = 'Custom.MyField'
+                name          = 'My Field'
+                type          = 'string'
+            }
+
+            $result = Import-AzDOProcessField -Field $field -ProcessName 'MyProcess' -ApiHeaders @{} -AutoResolveConflicts
+
+            $result.Success | Should -BeTrue
+            $result.Action  | Should -Be 'Created with Process Prefix'
+            Should -Invoke -CommandName 'Invoke-AzDORestApiMethod' -Exactly 2 -Scope It
+        }
+
+        It 'should create missing custom field when initial POST fails with non-name-conflict error' {
+            $script:calls = 0
+            Mock Invoke-AzDORestApiMethod {
+                $script:calls++
+                if ($script:calls -eq 1) {
+                    throw "Some other error indicating create failed"
+                }
+                # second call succeeds
+            }
+
+            $field = [PSCustomObject]@{
+                referenceName = 'Custom.NewField'
+                name          = 'New Field'
+                type          = 'string'
+            }
+
+            $result = Import-AzDOProcessField -Field $field -ProcessName 'MyProcess' -ApiHeaders @{} -AutoResolveConflicts
+
+            $result.Success | Should -BeTrue
+            $result.Action  | Should -Be 'Created Custom Field'
+            Should -Invoke -CommandName 'Invoke-AzDORestApiMethod' -Exactly 2 -Scope It
+        }
+    }
 }
