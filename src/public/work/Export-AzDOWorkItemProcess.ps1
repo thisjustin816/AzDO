@@ -91,10 +91,12 @@ function Export-AzDOWorkItemProcess {
 
         $workItemTypesWIthDetails = @()
         $witTotal = $workItemTypes.Count
+        $i = 0
         $workItemTypesWIthDetails += foreach ($wit in $workItemTypes) {
             $wit = Clear-AzDOObjectOrgData -InputObject $wit
 
-            $witIndex = $workItemTypes.IndexOf($wit) + 1
+            $i++
+            $witIndex = $i
             $witName = $wit.referenceName
 
             $witWithContent = $wit
@@ -163,12 +165,23 @@ function Export-AzDOWorkItemProcess {
 
         $progress['Status'] = 'Getting process fields...'
         Write-Progress @progress
-        $processFields = Invoke-AzDORestApiMethod `
-            @script:AzApiHeaders `
-            -Method Get `
-            -Endpoint "work/processes/$($process.typeId)/fields" `
-            -NoRetry:$NoRetry `
-            -ErrorAction Stop
+        try {
+            # Some inherited processes do not expose the process-level fields endpoint; use processDefinition.typeId for accuracy
+            $processFields = Invoke-AzDORestApiMethod `
+                @script:AzApiHeaders `
+                -Method Get `
+                -Endpoint "work/processes/$($processDefinition.typeId)/fields" `
+                -NoRetry:$NoRetry
+        }
+        catch {
+            if ($_.Exception.Message -match '404') {
+                Write-Warning "Process fields endpoint not available for this process type. Continuing without process-level fields."
+                $processFields = @()
+            }
+            else {
+                throw
+            }
+        }
 
         # Enhance fields with classification metadata to improve import success rates
         $enhancedFields = foreach ($field in $processFields) {
@@ -200,23 +213,50 @@ function Export-AzDOWorkItemProcess {
         $progress['Status'] = 'Finalizing export...'
         Write-Progress @progress -Completed
 
-        # Generate export summary
-        $systemFieldCount = ($enhancedFields | Where-Object { $_._exportMetadata.fieldCategory -eq 'System' }).Count
-        $standardFieldCount = ($enhancedFields | Where-Object { $_._exportMetadata.fieldCategory -eq 'Standard' }).Count
-        $customFieldCount = ($enhancedFields | Where-Object { $_._exportMetadata.fieldCategory -eq 'Custom' }).Count
-        $witCount = $workItemTypesWIthDetails.Count
-        $behaviorCount = $sanitizedBehaviors.Count
+        # Collect fields from work item types to handle inherited processes where process-level fields may be unavailable
+        $allFields = @()
+        foreach ($workItemType in $processDefinition.workItemTypes) {
+            if ($workItemType.fields) {
+                $allFields += $workItemType.fields
+            }
+        }
 
-        # Calculate auto-resolution percentage for import guidance
-        $autoResolutionRate = [math]::Round((($systemFieldCount + $standardFieldCount) /
-            $enhancedFields.Count) * 100, 1)
+        # Build a unique set of fields by referenceName
+        $uniqueFields = @()
+        $seen = @{}
+        foreach ($f in $allFields) {
+            $ref = $f.referenceName
+            if (-not $seen.ContainsKey($ref)) {
+                $seen[$ref] = $true
+                $uniqueFields += $f
+            }
+        }
+
+        # Compute category counts from unique fields
+        $systemFields   = $uniqueFields | Where-Object { $_.referenceName -like 'System.*' }
+        $standardFields = $uniqueFields | Where-Object { $_.referenceName -like 'Microsoft.VSTS.*' }
+        $customFields   = $uniqueFields | Where-Object { $_.referenceName -like 'Custom.*' }
+
+        $systemFieldCount   = $systemFields.Count
+        $standardFieldCount = $standardFields.Count
+        $customFieldCount   = $customFields.Count
+        $witCount           = $workItemTypesWIthDetails.Count
+        $behaviorCount      = $sanitizedBehaviors.Count
+
+        # Calculate auto-resolution percentage for import guidance with division-by-zero protection
+        if ($uniqueFields.Count -gt 0) {
+            $autoResolutionRate = [math]::Round((($systemFields.Count + $standardFields.Count) / $uniqueFields.Count) * 100, 1)
+        }
+        else {
+            $autoResolutionRate = 0
+        }
 
         $exportSummary = @{
             processName    = $ProcessName
             exportedAt     = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
             statistics     = @{
                 workItemTypes  = $witCount
-                totalFields    = $enhancedFields.Count
+                totalFields    = $uniqueFields.Count
                 systemFields   = $systemFieldCount
                 standardFields = $standardFieldCount
                 customFields   = $customFieldCount
@@ -248,7 +288,7 @@ function Export-AzDOWorkItemProcess {
         Write-Host "Successfully exported process '$ProcessName'" -ForegroundColor Green
         Write-Host "Export Summary:" -ForegroundColor Cyan
         Write-Host "  Work Item Types: $witCount" -ForegroundColor White
-        Write-Host "  Total Fields: $($enhancedFields.Count)" -ForegroundColor White
+    Write-Host "  Total Fields: $($uniqueFields.Count)" -ForegroundColor White
         Write-Host "    - System Fields: $systemFieldCount" -ForegroundColor Gray
         Write-Host "    - Standard Fields: $standardFieldCount" -ForegroundColor Gray
         Write-Host "    - Custom Fields: $customFieldCount" -ForegroundColor Yellow
