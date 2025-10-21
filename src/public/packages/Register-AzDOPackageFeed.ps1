@@ -22,6 +22,9 @@ Register-AzDOPackageFeed `
     -Name MyFeed `
     -Location https://pkgs.dev.azure.com/MyOrg/_packaging/MyFeed/nuget/v3/index.json
 
+.LINK
+https://github.com/microsoft/artifacts-credprovider#environment-variables
+
 .NOTES
 N/A
 #>
@@ -52,42 +55,47 @@ function Register-AzDOPackageFeed {
             -Scope User `
             -Force
         $env:NUGET_CREDENTIALPROVIDER_SESSIONTOKENCACHE_ENABLED = 'true'
-
-        Update-AzDOAccessToken -Pat $Pat -System $false -CmTools $false
     }
 
     process {
         foreach ($feedName in $Name) {
             if (!$Location) {
+                $orgName = $CollectionUri.TrimEnd('/').Split('/')[-1]
+                $fullLocation = "https://pkgs.dev.azure.com/$orgName"
+
+                if (![String]::IsNullOrEmpty($Project)) {
+                    $fullLocation += "/$Project"
+                }
+
+                $fullLocation += "/_packaging/$feedName/nuget/v$($FeedVersion)"
                 if ($FeedVersion -eq 3) {
-                    $fullLocation = $CollectionUri.Replace('https://', 'https://pkgs.')
-                    if ($fullLocation[-1] -ne '/') {
-                        $fullLocation += '/'
-                    }
-                }
-                else {
-                    $orgName = $CollectionUri.Replace('https://dev.azure.com/', '').Replace('/', '').ToLower()
-                    $fullLocation = "https://$($orgName).pkgs.visualstudio.com/"
-                }
-                if (![String]::isNullOrEmpty($Project)) {
-                    $fullLocation += "$Project/"
-                }
-                if ($FeedVersion -eq 3) {
-                    $fullLocation += "_packaging/$feedName/nuget/v3/index.json"
-                }
-                else {
-                    $fullLocation += "_packaging/$feedName/nuget/v2"
+                    $fullLocation += "/index.json"
                 }
             }
             else {
                 $fullLocation = $Location
             }
 
+            $endpointConfig = @{
+                endpointCredentials = @(
+                    @{
+                        endpoint = $fullLocation
+                        password = $Pat
+                    }
+                )
+            } | ConvertTo-Json -Compress
+
+            $env:ARTIFACTS_CREDENTIALPROVIDER_FEED_ENDPOINTS = $endpointConfig
+
+            # Create PSCredential for NuGet authentication
+            $secureString = ConvertTo-SecureString $Pat -AsPlainText -Force
+            $cred = New-Object System.Management.Automation.PSCredential "PAT", $secureString
+
             Register-PackageSource `
                 -Name $feedName `
                 -Location $fullLocation `
                 -ProviderName NuGet `
-                -Credential ( Get-PatPSCredential -Pat $Pat ) `
+                -Credential $cred `
                 -Trusted `
                 -Force:$Force
         }

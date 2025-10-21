@@ -56,7 +56,12 @@ function Add-AzDOPackage {
             }
             catch {
                 if ( Get-AzDOPackageFeed -Name $feed -Project $Project -CollectionUri $CollectionUri -Pat $Pat ) {
-                    $null = Register-AzDOPackageFeed -Name $feed -Project $Project -Force -Pat $Pat
+                    $null = Register-AzDOPackageFeed `
+                        -Name $feed `
+                        -Project $Project `
+                        -Force `
+                        -CollectionUri $CollectionUri `
+                        -Pat $Pat
                 }
                 else {
                     throw $_
