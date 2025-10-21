@@ -60,7 +60,15 @@ function Register-AzDOPackageFeed {
     process {
         foreach ($feedName in $Name) {
             if (!$Location) {
-                $orgName = $CollectionUri.TrimEnd('/').Split('/')[-1]
+                $orgName = if ($CollectionUri -match 'dev\.azure\.com/([^/]+)') {
+                    $matches[1]
+                }
+                elseif ($CollectionUri -match '([^\.]+)\.visualstudio\.com') {
+                    $matches[1]
+                }
+                else {
+                    throw "Unable to extract organization name from CollectionUri: $CollectionUri"
+                }
                 $fullLocation = "https://pkgs.dev.azure.com/$orgName"
 
                 if (![String]::IsNullOrEmpty($Project)) {
