@@ -30,7 +30,7 @@ function Test-AzDOConnection {
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
-        [string]$Pat = $env:SYSTEM_ACCESSTOKEN
+        [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     begin {

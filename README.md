@@ -25,7 +25,7 @@ The function's `begin` block should start with the following header declaration 
 $script:AzApiHeaders = @{
     Headers       = Initialize-AzDORestApi -Pat $Pat
     CollectionUri = $CollectionUri
-    ApiVersion    = '6.0'
+    ApiVersion    = '7.1-preview.2'
 }
 ```
 

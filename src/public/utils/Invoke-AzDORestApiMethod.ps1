@@ -67,21 +67,21 @@ function Invoke-AzDORestApiMethod {
     param (
         [ValidateSet('Get', 'Patch', 'Delete', 'Put', 'Post')]
         [Parameter(Mandatory = $true)]
-        [string]$Method,
+        [String]$Method,
         [Parameter(ParameterSetName = 'Uri')]
-        [string]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
+        [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
         [Parameter(ParameterSetName = 'Org', Mandatory = $true)]
-        [string]$Organization,
-        [string]$SubDomain,
-        [string]$Project, # = $env:SYSTEM_TEAMPROJECT
-        [string]$Team,
+        [String]$Organization,
+        [String]$SubDomain,
+        [String]$Project, # = $env:SYSTEM_TEAMPROJECT
+        [String]$Team,
         [Parameter(Mandatory = $true)]
-        [string]$Endpoint,
+        [String]$Endpoint,
         [string[]]$Params,
-        [string]$Body,
-        [string]$OutFile,
+        [String]$Body,
+        [String]$OutFile,
         [Switch]$NoRetry,
-        [string]$ApiVersion = '6.0',
+        [String]$ApiVersion = '6.0',
         [hashtable]$Headers = ( Initialize-AzDORestApi )
     )
 

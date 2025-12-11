@@ -51,7 +51,7 @@ function Get-AzDOReleasePipeline {
         [Switch]$NoRetry,
         [String[]]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
-        [string]$Pat = $env:SYSTEM_ACCESSTOKEN
+        [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     begin {

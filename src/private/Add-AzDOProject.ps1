@@ -1,27 +1,29 @@
 ﻿<#
 .SYNOPSIS
-${1:Short description}
+Adds project metadata to an Azure DevOps API response object.
 
 .DESCRIPTION
-${2:Long description}
+Parses the URL property from an Azure DevOps API response object to extract the project reference, retrieves the full
+project details, and attaches them as a 'project' property.
 
 .PARAMETER InputObject
-${3:Parameter description}
+An API response object.
 
 .PARAMETER NoRetry
-${4:Parameter description}
+Disables automatic retry logic for API calls.
 
 .PARAMETER CollectionUri
-${5:Parameter description}
+The URI of the Azure DevOps org (e.g. https://dev.azure.com/myorg). Defaults to the SYSTEM_COLLECTIONURI environment
+variable.
 
 .PARAMETER Pat
-${6:Parameter description}
+Azure DevOps personal authentication token. Defaults to the SYSTEM_ACCESSTOKEN environment variable.
 
 .EXAMPLE
-${7:An example}
+$pipeline | Add-AzDOProject
 
 .NOTES
-${8:General notes}
+N/A
 #>
 function Add-AzDOProject {
     [CmdletBinding()]
@@ -30,7 +32,7 @@ function Add-AzDOProject {
         [System.Object]$InputObject,
         [Switch]$NoRetry,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
-        [string]$Pat = $env:SYSTEM_ACCESSTOKEN
+        [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     process {

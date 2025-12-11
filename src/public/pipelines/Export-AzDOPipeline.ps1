@@ -34,8 +34,8 @@ function Export-AzDOPipeline {
     param (
         [Parameter(ValueFromPipeline = $true)]
         [System.Object[]]$PipelineDefinition,
-        [string]$Destination = 'azure-pipelines',
-        [string]$Pat = $env:SYSTEM_ACCESSTOKEN
+        [String]$Destination = 'azure-pipelines',
+        [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     begin {
