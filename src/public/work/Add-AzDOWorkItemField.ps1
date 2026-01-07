@@ -101,7 +101,7 @@ function Add-AzDOWorkItemField {
 
     begin {
         $script:AzApiHeaders = @{
-            Headers       = Initialize-AzDORestApiHeaders -Pat $Pat
+            Headers       = Initialize-AzDORestApi -Pat $Pat
             CollectionUri = $CollectionUri
             ApiVersion    = '7.1-preview.2'
         }
