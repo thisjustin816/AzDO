@@ -1,9 +1,9 @@
 Describe 'Integration Tests' -Tag 'Integration' {
     BeforeAll {
-        . $PSScriptRoot\Watch-AzDOPipelineRun.ps1
-        . $PSScriptRoot\Get-AzDOPipelineRun.ps1
-        . $PSScriptRoot\Get-AzDOPipeline.ps1
-        . $PSScriptRoot\Start-AzDOPipelineRun.ps1
+        . "$PSScriptRoot/Watch-AzDOPipelineRun.ps1"
+        . "$PSScriptRoot/Get-AzDOPipelineRun.ps1"
+        . "$PSScriptRoot/Get-AzDOPipeline.ps1"
+        . "$PSScriptRoot/Start-AzDOPipelineRun.ps1"
 
         Mock Clear-Host
 

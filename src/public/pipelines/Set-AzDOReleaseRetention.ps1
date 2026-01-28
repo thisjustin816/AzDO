@@ -53,7 +53,7 @@ function Set-AzDOReleaseRetention {
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [System.Object]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
-        [string]$Pat = $env:SYSTEM_ACCESSTOKEN
+        [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     begin {
@@ -65,7 +65,7 @@ function Set-AzDOReleaseRetention {
     }
 
     process {
-        . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         $releaseDefinition = Get-AzDOReleasePipeline `

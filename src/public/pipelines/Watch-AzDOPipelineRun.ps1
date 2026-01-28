@@ -90,7 +90,7 @@ function Watch-AzDOPipelineRun {
     }
 
     process {
-        . $PSScriptRoot/../../Private/Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         $allBuildIds = @()

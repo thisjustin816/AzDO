@@ -44,7 +44,7 @@ function Update-AzDOPipeline {
         [Switch]$NoRetry,
         [String[]]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,
-        [string]$Pat = $env:SYSTEM_ACCESSTOKEN
+        [String]$Pat = $env:SYSTEM_ACCESSTOKEN
     )
 
     begin {
@@ -56,7 +56,7 @@ function Update-AzDOPipeline {
     }
 
     process {
-        . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         if ($PSCmdlet.ShouldProcess(

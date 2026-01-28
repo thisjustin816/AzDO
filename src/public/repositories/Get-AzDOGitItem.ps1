@@ -49,9 +49,9 @@ function Get-AzDOGitItem {
     param (
         [Alias('Repo')]
         [String]$Repository = $env:BUILD_REPOSITORY_NAME,
-        [string]$Branch = 'main',
-        [string]$Path = 'README.md',
-        [string]$OutFile,
+        [String]$Branch = 'main',
+        [String]$Path = 'README.md',
+        [String]$OutFile,
         [Switch]$NoRetry,
         [String]$Project = $env:SYSTEM_TEAMPROJECT,
         [String]$CollectionUri = $env:SYSTEM_COLLECTIONURI,

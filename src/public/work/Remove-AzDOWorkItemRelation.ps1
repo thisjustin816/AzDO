@@ -60,7 +60,7 @@ function Remove-AzDOWorkItemRelation {
     }
 
     process {
-        . $PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         $relationTypeMap = & $PSScriptRoot/../../private/AzDOWorkItemRelationTypeMap.ps1
@@ -75,7 +75,6 @@ function Remove-AzDOWorkItemRelation {
                 -CollectionUri $CollectionUri `
                 -Pat $Pat
 
-            # Find the index of the link to remove
             $linkIndex = @(
                 $workItem.relations |
                     Where-Object { $_.rel -eq $apiRelationType } |
