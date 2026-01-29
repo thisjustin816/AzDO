@@ -68,6 +68,7 @@ function Get-AzDOPipelineRunLog {
     }
 
     process {
+        . "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
         $Project = $Project | Get-AzDOApiProjectName
 
         $progress = @{
@@ -101,7 +102,7 @@ function Get-AzDOPipelineRunLog {
                 $null = Invoke-AzDORestApiMethod `
                     @script:AzApiHeaders `
                     @logsRestCall `
-                    -Params @{'$format' = 'zip'} `
+                    -Params @{'$format' = 'zip' } `
                     -OutFile $outfile.FullName
 
                 Write-Progress @progress -CurrentOperation 'Staging log archive'
