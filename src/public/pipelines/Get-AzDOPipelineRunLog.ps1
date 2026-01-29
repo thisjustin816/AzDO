@@ -62,9 +62,11 @@ function Get-AzDOPipelineRunLog {
     )
 
     begin {
-        $script:AzApiHeaders = Initialize-AzDORestApi -Pat $Pat
-        $script:AzApiHeaders['CollectionUri'] = $CollectionUri
-        $script:AzApiHeaders['ApiVersion'] = '6.1'
+        $script:AzApiHeaders = @{
+            Headers       = Initialize-AzDORestApi -Pat $Pat
+            CollectionUri = $CollectionUri
+            ApiVersion    = '6.1'
+        }
     }
 
     process {
