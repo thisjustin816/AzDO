@@ -1,26 +1,20 @@
-$BuildPSModule = @{
-    Name        = 'AzDOCmd'
-    Version     = '2.4.0'
-    Description = 'A module for interacting with Azure DevOps.'
-    Tags        = (
-        'PSEdition_Desktop',
-        'PSEdition_Core',
-        'Azure',
-        'AzureDevOps',
-        'AzDO',
-        'AzurePipelines',
-        'AzPipelines'
-    )
-}
+#Requires -Version 7.4
+[CmdletBinding()]
+param ()
 
-Push-Location -Path $PSScriptRoot
-Install-Module -Name JBUtils -Force -AllowClobber
-Import-Module -Name "$PSScriptRoot/src/$($BuildPSModule['Name']).psm1" -Force
-Install-Module -Name Pester -SkipPublisherCheck -Force
-Install-Module -Name PSModuleUtils -Force
-if (!$env:GITHUB_ACTIONS) {
-    Invoke-PSModuleAnalyzer -Fix
+$ErrorActionPreference = 'Stop'
+Push-Location -LiteralPath $PSScriptRoot
+try {
+    Import-Module -FullyQualifiedName @{
+        ModuleName = 'PSModuleUtils'; ModuleVersion = '5.0.0'; MaximumVersion = '5.999.999'
+    } -ErrorAction Stop
+    if (-not $env:GITHUB_ACTIONS) {
+        Invoke-PSModuleAnalyzer -Fix
+    }
+    $builtManifest = Build-PSModule
+    Test-PSModule -Name $builtManifest.BaseName -Tag 'Unit'
+    $builtManifest
 }
-Build-PSModule @BuildPSModule
-Test-PSModule -Name $BuildPSModule['Name'] -Tag Unit
-Pop-Location
+finally {
+    Pop-Location
+}

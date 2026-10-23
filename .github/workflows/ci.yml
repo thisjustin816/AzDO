@@ -19,4 +19,6 @@ jobs:
       contents: write # Needed for tagging with the released version
       pull-requests: write # Needed for publishing test results
     uses: thisjustin816/reusable-workflows/.github/workflows/ps-ci.yml@main
+    with:
+      psmoduleutils_version: '5.0.0'
     secrets: inherit
