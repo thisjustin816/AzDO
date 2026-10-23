@@ -8,9 +8,30 @@ A module for interacting with Azure DevOps.
 Install-Module AzDOCmd
 ```
 
+## Azure Pipelines variables
+
+`Set-AzPipelinesVariable` writes a non-secret variable for subsequent tasks when
+`AGENT_JOBNAME` is set. It leaves the current process environment unchanged and
+does nothing outside an agent job.
+
+```powershell
+Set-AzPipelinesVariable -Name PackageVersion -Value '1.2.3'
+```
+
+Values and names are escaped for the agent logging protocol. `-PassThru` returns
+the original name and value; `-WhatIf` writes no command. Setting PATH requires
+`-Force`, which still respects `-WhatIf` and `-Confirm`. For appending PATH, the
+existing `Add-AzPipelinesPathEntry` command is supplied by JBUtils. Call pipeline
+operations explicitly when migrating from PSUtils; JBUtils environment setters
+do not propagate changes to subsequent Azure tasks.
+
+This helper has no secret-variable mode. Use the pipeline's secret mechanisms
+for credentials and tokens.
+
 ## Azure DevOps API Functions
 
-For functions that wrap an Azure DevOps API, there are some standard parameters and script blocks that should be used. All functions should include the following parameters and default values as the last ones in the `param` block:
+Azure DevOps API wrappers share these parameters. Put them at the end of the
+`param` block:
 
 ```powershell
 [Parameter(ValueFromPipelineByPropertyName = $true)]
@@ -19,25 +40,23 @@ For functions that wrap an Azure DevOps API, there are some standard parameters 
 [String]$Pat = $env:SYSTEM_ACCESSTOKEN
 ```
 
-The function's `begin` block should start with the following header declaration (with the `ApiVersion` updated as needed):
+Initialize the request headers in `begin` and select the endpoint's API version:
 
 ```powershell
 $script:AzApiHeaders = @{
     Headers       = Initialize-AzDORestApi -Pat $Pat
     CollectionUri = $CollectionUri
-    Pat           = $Pat
     ApiVersion    = '7.1-preview.2'
 }
 ```
 
-The function's `process` block should start with the following code to process the `$Project` parameter if it was passed from the pipeline:
+Resolve project objects from pipeline input in `process`:
 
 ```powershell
-. "$PSScriptRoot/../../private/Get-AzDOApiProjectName.ps1"
 $Project = $Project | Get-AzDOApiProjectName
 ```
 
-And finally, each invocation of `Invoke-AzDORestApiMethod` should use the following pattern:
+Call the shared REST wrapper:
 
 ```powershell
 Invoke-AzDORestApiMethod `
@@ -48,48 +67,36 @@ Invoke-AzDORestApiMethod `
     -NoRetry:$NoRetry
 ```
 
-## PowerShell Module Development
+## Development
 
-Follow [The PowerShell Best Practices and Style Guide](https://poshcode.gitbooks.io/powershell-practice-and-style/) as much as possible, with the following rules being the most important:
+The source manifest is `src/AzDOCmd.psd1`. Exported functions live under
+`src/Public/<api-category>`; private helpers live under `src/Private`. ModuleBuilder
+compiles both into a versioned module under `out/AzDOCmd`. Functions call private
+helpers directly, so the built module does not depend on source-tree paths.
 
-- Use [Approved Verbs](https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-5.1) for commands so that PowerShell's built-in ability to autocomplete un-imported functions works.
-- Add help comments to **all** functions because each module's wiki is auto-generated from them.
+Tests live under `tests`, mirroring the source layout. The default build runs the
+`Unit` tag with Pester 6, including the built module's exported-command contract.
+The `WindowsPowerShell` tag verifies the 5.1 transport with mocked responses.
+Run it in Windows PowerShell 5.1. Integration tests require a dedicated Azure
+DevOps environment and credentials;
+run them separately. Unit tests must mock every service call and installation.
 
-Use the following additional guidelines:
+Building requires PowerShell 7.4 or newer and PSModuleUtils 5.x. Start a fresh
+process after using another Pester major version:
 
-- The module file itself (`.psm1`) should not contain any functions or logic, in most cases, other than a `foreach` loop to dot source all the `.ps1` files and `New-Alias` statements for specific functions.
-- Ideally, each module and each of its functions should have a set of [Pester](https://github.com/pester/Pester) unit/integration tests. At the least, any new functions or functionality should have an associated test.
-- Create all functions as single `.ps1` files with the same name and without `Export-ModuleMember` statements.
-  - The files should be in an appropriate nested `Public` folder that corresponds to its API category.
-  - Functions that are used by other functions should be put in either `Utils` or `Private`, depending on their usage.
-- The module file (`.psm1`) and each function should have a corresponding `.Tests.ps1` file containing Pester unit/integration tests.
-- Don't change any documentation or manifest files; they are automatically populated by the pipeline.
-
-The folder structure should be maintained like the example below:
-
-```console
-\MODULEREPODIRECTORY
-├───.github
-│   └───workflows
-├───.gitignore
-├───LICENSE
-├───README.md
-│
-└───src
-    ├───ModuleName.Module.Tests.ps1
-    ├───ModuleName.psm1
-    │
-    public
-    ├───functionalArea
-    │   ├───Verb-Noun.ps1
-    │   └───Verb-Noun.Tests.ps1
-    │
-    private
-    ├───Verb-Noun.ps1
-    └───Verb-Noun.Tests.ps1
+```powershell
+Install-Module -Name PSModuleUtils -MinimumVersion 5.0.0 -MaximumVersion 5.999.999 -Scope CurrentUser
+./build.ps1
 ```
 
-### Module TODOs
+The installed module retains its Windows PowerShell 5.1 and PowerShell Core
+manifest requirements. A passing build is local verification; it does not validate
+live Azure DevOps operations. Publication remains a separate `publish.ps1` step.
 
-- [ ] Implement more API wrappers
-- [ ] Figure out a way to test live apis in the GitHub Actions pipeline
+Keep one function per source file, use approved verbs, and document public inputs
+and outputs in comment-based help. ModuleBuilder derives exports from the public
+source files. Update the authored manifest for dependencies and release versions;
+Git metadata is applied only to the built manifest.
+
+`Remove-AzDOWorkItemRelation` requires an explicit `-RelationType`. Choose Parent, Child,
+Successor, Predecessor, or Related; omitting the parameter does not remove all relations.

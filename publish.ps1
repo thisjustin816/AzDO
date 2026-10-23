@@ -1,4 +1,9 @@
-$Name = 'AzDOCmd'
+#Requires -Version 7.4
+[CmdletBinding()]
+param ()
 
-Import-Module -Name "$PSScriptRoot/src/$Name.psm1" -Force
-Publish-PSModule -Name $Name -Confirm:(!$env:GITHUB_ACTIONS)
+$ErrorActionPreference = 'Stop'
+Import-Module -FullyQualifiedName @{
+    ModuleName = 'PSModuleUtils'; ModuleVersion = '5.0.0'; MaximumVersion = '5.999.999'
+} -ErrorAction Stop
+Publish-PSModule -Name 'AzDOCmd' -OutputDirectory "$PSScriptRoot/out" -Confirm:(-not $env:GITHUB_ACTIONS)
